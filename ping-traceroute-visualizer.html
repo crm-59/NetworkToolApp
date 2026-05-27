@@ -1,0 +1,802 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Ping & Traceroute Visualizer</title>
+<link href="https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@300;400;500;600;700&family=Rajdhani:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+<style>
+:root {
+  --bg-primary:#0d1117; --bg-secondary:#161b22; --bg-card:#1c2230; --bg-input:#0d1117;
+  --border:#30363d; --border-accent:#1e6fa8; --accent:#2ea8e0; --accent-glow:rgba(46,168,224,.15);
+  --accent-bright:#58c8f4; --text-primary:#e6edf3; --text-secondary:#8b949e; --text-muted:#484f58;
+  --success:#3fb950; --warning:#d29922; --error:#f85149; --grid-line:rgba(46,168,224,.06);
+  --ping-good:#3fb950; --ping-ok:#d29922; --ping-bad:#f85149; --ping-timeout:#484f58;
+}
+*{box-sizing:border-box;margin:0;padding:0}
+body{background:var(--bg-primary);color:var(--text-primary);font-family:'Rajdhani',sans-serif;font-size:15px;min-height:100vh;
+  background-image:linear-gradient(var(--grid-line) 1px,transparent 1px),linear-gradient(90deg,var(--grid-line) 1px,transparent 1px);
+  background-size:40px 40px}
+.app{max-width:980px;margin:0 auto;padding:28px 18px 60px}
+
+header{text-align:center;margin-bottom:26px}
+.header-badge{display:inline-block;font-family:'JetBrains Mono',monospace;font-size:10px;letter-spacing:3px;color:var(--accent);
+  background:var(--accent-glow);border:1px solid var(--border-accent);border-radius:2px;padding:3px 10px;margin-bottom:8px;text-transform:uppercase}
+header h1{font-size:36px;font-weight:700;letter-spacing:2px;
+  background:linear-gradient(135deg,var(--accent-bright),var(--accent));-webkit-background-clip:text;-webkit-text-fill-color:transparent;background-clip:text;text-transform:uppercase}
+header p{color:var(--text-secondary);font-size:12px;font-family:'JetBrains Mono',monospace;letter-spacing:1px;margin-top:5px}
+
+/* Mode toggle */
+.mode-toggle{display:flex;justify-content:center;margin-bottom:20px;border:1px solid var(--border);border-radius:6px;overflow:hidden;width:fit-content;margin-inline:auto}
+.mode-btn{padding:9px 30px;font-family:'Rajdhani',sans-serif;font-size:14px;font-weight:600;letter-spacing:1px;cursor:pointer;
+  background:transparent;border:none;color:var(--text-secondary);transition:.2s;text-transform:uppercase}
+.mode-btn.active{background:var(--accent);color:#fff;box-shadow:0 0 12px var(--accent-glow)}
+
+/* Card */
+.card{background:var(--bg-card);border:1px solid var(--border);border-radius:8px;padding:22px;margin-bottom:16px;position:relative;overflow:hidden}
+.card::before{content:'';position:absolute;top:0;left:0;right:0;height:2px;background:linear-gradient(90deg,transparent,var(--accent),transparent);opacity:.6}
+.card-title{font-family:'JetBrains Mono',monospace;font-size:11px;letter-spacing:2px;text-transform:uppercase;color:var(--accent);
+  margin-bottom:16px;display:flex;align-items:center;gap:8px}
+.card-title::after{content:'';flex:1;height:1px;background:linear-gradient(90deg,var(--border-accent),transparent);opacity:.4}
+
+/* Input row */
+.input-row{display:flex;gap:10px;align-items:flex-end;flex-wrap:wrap}
+.field{display:flex;flex-direction:column;gap:7px;flex:1;min-width:180px}
+.field-label{font-family:'JetBrains Mono',monospace;font-size:10px;letter-spacing:1.5px;text-transform:uppercase;color:var(--text-secondary)}
+.field input[type=text],.field input[type=number],.field select{
+  background:var(--bg-input);border:1px solid var(--border);border-radius:5px;color:var(--text-primary);
+  font-family:'JetBrains Mono',monospace;font-size:14px;padding:9px 13px;width:100%;outline:none;transition:.2s}
+.field input:focus,.field select:focus{border-color:var(--accent);box-shadow:0 0 0 3px var(--accent-glow)}
+.field select{cursor:pointer}
+.field select option{background:var(--bg-secondary)}
+.field-hint{font-family:'JetBrains Mono',monospace;font-size:10px;color:var(--text-muted)}
+
+/* Run button */
+.run-btn{padding:10px 26px;background:var(--accent);border:none;border-radius:5px;color:#fff;
+  font-family:'Rajdhani',sans-serif;font-weight:700;font-size:15px;letter-spacing:1px;cursor:pointer;
+  transition:.2s;white-space:nowrap;display:flex;align-items:center;gap:8px;align-self:flex-end}
+.run-btn:hover{background:var(--accent-bright);box-shadow:0 0 16px var(--accent-glow)}
+.run-btn.running{background:var(--bg-secondary);border:1px solid var(--accent);color:var(--accent);cursor:not-allowed}
+.stop-btn{padding:10px 26px;background:transparent;border:1px solid var(--error);border-radius:5px;color:var(--error);
+  font-family:'Rajdhani',sans-serif;font-weight:700;font-size:15px;letter-spacing:1px;cursor:pointer;
+  transition:.2s;white-space:nowrap;align-self:flex-end}
+.stop-btn:hover{background:rgba(248,81,73,.1)}
+
+/* Stats bar */
+.stats-bar{display:flex;gap:6px;flex-wrap:wrap;margin-bottom:14px}
+.stat-chip{font-family:'JetBrains Mono',monospace;font-size:11px;padding:5px 12px;border-radius:4px;
+  background:var(--bg-input);border:1px solid var(--border);display:flex;align-items:center;gap:6px}
+.stat-label{color:var(--text-muted)}
+.stat-val{color:var(--accent-bright);font-weight:600}
+.stat-val.good{color:var(--ping-good)}
+.stat-val.ok{color:var(--ping-ok)}
+.stat-val.bad{color:var(--ping-bad)}
+
+/* Ping timeline */
+.ping-timeline{display:flex;align-items:flex-end;gap:3px;height:100px;padding:8px 0 0;overflow-x:auto;min-height:116px}
+.ping-bar-wrap{display:flex;flex-direction:column;align-items:center;gap:4px;flex-shrink:0}
+.ping-bar{width:14px;border-radius:2px 2px 0 0;transition:height .3s ease;cursor:pointer;position:relative}
+.ping-bar:hover::after{content:attr(data-tip);position:absolute;bottom:calc(100% + 4px);left:50%;transform:translateX(-50%);
+  background:var(--bg-secondary);border:1px solid var(--border);border-radius:4px;padding:3px 7px;
+  font-family:'JetBrains Mono',monospace;font-size:10px;color:var(--text-primary);white-space:nowrap;z-index:10;pointer-events:none}
+.ping-bar.good{background:var(--ping-good);box-shadow:0 0 6px rgba(63,185,80,.3)}
+.ping-bar.ok{background:var(--ping-ok);box-shadow:0 0 6px rgba(210,153,34,.3)}
+.ping-bar.bad{background:var(--ping-bad);box-shadow:0 0 6px rgba(248,81,73,.3)}
+.ping-bar.timeout{background:var(--ping-timeout);opacity:.5}
+.ping-seq{font-family:'JetBrains Mono',monospace;font-size:8px;color:var(--text-muted);writing-mode:vertical-rl;transform:rotate(180deg)}
+
+/* Ping log */
+.ping-log{font-family:'JetBrains Mono',monospace;font-size:12px;max-height:220px;overflow-y:auto;
+  background:var(--bg-input);border:1px solid var(--border);border-radius:5px;padding:10px 14px;line-height:1.8}
+.ping-log::-webkit-scrollbar{width:4px}
+.ping-log::-webkit-scrollbar-track{background:var(--bg-input)}
+.ping-log::-webkit-scrollbar-thumb{background:var(--border);border-radius:2px}
+.log-line{display:flex;gap:10px}
+.log-seq{color:var(--text-muted);min-width:34px}
+.log-host{color:var(--text-secondary)}
+.log-ms{font-weight:600}
+.log-ms.good{color:var(--ping-good)}
+.log-ms.ok{color:var(--ping-ok)}
+.log-ms.bad{color:var(--ping-bad)}
+.log-ms.timeout{color:var(--ping-timeout)}
+.log-ttl{color:var(--text-muted)}
+.log-info{color:var(--text-muted);font-style:italic}
+
+/* RTT chart canvas */
+#rttCanvas{width:100%;border-radius:5px;background:var(--bg-input);border:1px solid var(--border);display:block}
+
+/* Traceroute */
+.hop-table{width:100%;border-collapse:collapse;font-family:'JetBrains Mono',monospace;font-size:12px}
+.hop-table th{background:var(--bg-secondary);color:var(--accent);font-size:10px;letter-spacing:1px;text-transform:uppercase;
+  padding:8px 12px;text-align:left;border-bottom:1px solid var(--border)}
+.hop-table td{padding:9px 12px;border-bottom:1px solid rgba(48,54,61,.4);vertical-align:middle}
+.hop-table tr:hover td{background:rgba(46,168,224,.04)}
+.hop-num{color:var(--text-muted);min-width:30px}
+.hop-ip{color:var(--accent-bright)}
+.hop-host{color:var(--text-secondary);font-size:11px;margin-top:2px}
+.hop-rtt{font-weight:600}
+.hop-bar-cell{min-width:160px}
+.hop-bar-bg{height:8px;background:var(--bg-secondary);border-radius:4px;overflow:hidden;position:relative}
+.hop-bar-fill{height:100%;border-radius:4px;transition:width 1s ease}
+.hop-status{font-size:10px;letter-spacing:.5px;padding:2px 7px;border-radius:3px;text-transform:uppercase;font-weight:600;display:inline-block}
+.hop-status.reached{background:rgba(63,185,80,.15);color:var(--success);border:1px solid rgba(63,185,80,.3)}
+.hop-status.transit{background:rgba(46,168,224,.1);color:var(--accent);border:1px solid rgba(46,168,224,.2)}
+.hop-status.timeout{background:rgba(72,79,88,.2);color:var(--text-muted);border:1px solid var(--border)}
+.hop-status.private{background:rgba(210,153,34,.12);color:var(--warning);border:1px solid rgba(210,153,34,.3)}
+
+/* Trace diagram canvas */
+#traceCanvas{width:100%;border-radius:5px;background:var(--bg-input);border:1px solid var(--border);display:block}
+
+/* Animated pulse dot */
+@keyframes pulse{0%,100%{opacity:1;transform:scale(1)}50%{opacity:.4;transform:scale(.7)}}
+.pulse-dot{width:8px;height:8px;border-radius:50%;background:var(--accent);display:inline-block;animation:pulse 1s infinite;vertical-align:middle;margin-right:6px}
+
+/* Jitter chart */
+#jitterCanvas{width:100%;border-radius:5px;background:var(--bg-input);border:1px solid var(--border);display:block;margin-top:10px}
+
+/* Legend */
+.legend{display:flex;gap:16px;flex-wrap:wrap;font-family:'JetBrains Mono',monospace;font-size:10px;color:var(--text-secondary);margin-top:8px}
+.legend-item{display:flex;align-items:center;gap:5px}
+.legend-dot{width:9px;height:9px;border-radius:2px;flex-shrink:0}
+
+/* Glossary */
+.glossary-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(270px,1fr));gap:10px}
+.glossary-item{background:var(--bg-input);border:1px solid var(--border);border-radius:6px;padding:13px;transition:border-color .2s}
+.glossary-item:hover{border-color:var(--border-accent)}
+.glossary-term{font-family:'JetBrains Mono',monospace;font-size:11px;font-weight:600;color:var(--accent);text-transform:uppercase;letter-spacing:1px;margin-bottom:5px}
+.glossary-def{font-size:13px;color:var(--text-secondary);line-height:1.55}
+
+/* Tabs */
+.tabs{display:flex;gap:0;border-bottom:1px solid var(--border);margin-bottom:16px;overflow-x:auto}
+.tab{padding:9px 18px;font-family:'JetBrains Mono',monospace;font-size:11px;letter-spacing:1px;text-transform:uppercase;
+  cursor:pointer;color:var(--text-muted);border-bottom:2px solid transparent;margin-bottom:-1px;transition:.2s;white-space:nowrap;
+  background:none;border-top:none;border-left:none;border-right:none}
+.tab:hover{color:var(--text-secondary)}
+.tab.active{color:var(--accent);border-bottom-color:var(--accent)}
+.tab-panel{display:none}
+.tab-panel.active{display:block}
+
+.empty-state{text-align:center;padding:40px 20px;font-family:'JetBrains Mono',monospace;font-size:12px;color:var(--text-muted)}
+.empty-state .icon{font-size:32px;margin-bottom:10px;display:block;opacity:.4}
+
+footer{text-align:center;margin-top:32px;font-family:'JetBrains Mono',monospace;font-size:10px;color:var(--text-muted);letter-spacing:1px}
+
+@media print{
+  body{background:#fff!important;color:#000!important;background-image:none!important}
+  .mode-toggle,.run-btn,.stop-btn{display:none!important}
+  .card{background:#fff!important;border:1px solid #ccc!important}
+  .card::before{display:none}
+  .tab-panel{display:block!important}
+  .ping-log{background:#f5f5f5!important;border:1px solid #ccc!important}
+  header h1{-webkit-text-fill-color:#000;background:none;color:#000}
+}
+</style>
+</head>
+<body>
+<div class="app">
+
+<header>
+  <div class="header-badge">Network Diagnostic</div>
+  <h1>Ping &amp; Traceroute</h1>
+  <p>Interactive Network Path Visualizer &mdash; Simulated Diagnostic Tool</p>
+</header>
+
+<!-- Mode toggle -->
+<div class="mode-toggle">
+  <button class="mode-btn active" id="modePing" onclick="setMode('ping')">Ping</button>
+  <button class="mode-btn" id="modeTrace" onclick="setMode('trace')">Traceroute</button>
+</div>
+
+<!-- ═══ PING MODE ═══ -->
+<div id="pingMode">
+  <div class="card">
+    <div class="card-title">Ping Configuration</div>
+    <div class="input-row">
+      <div class="field">
+        <span class="field-label">Target Host / IP</span>
+        <input type="text" id="pingHost" placeholder="e.g. 8.8.8.8 or google.com" value="8.8.8.8">
+        <span class="field-hint">Hostname or IPv4 / IPv6 address</span>
+      </div>
+      <div class="field" style="max-width:130px">
+        <span class="field-label">Count</span>
+        <input type="number" id="pingCount" min="1" max="100" value="20">
+      </div>
+      <div class="field" style="max-width:150px">
+        <span class="field-label">Interval (ms)</span>
+        <input type="number" id="pingInterval" min="100" max="5000" value="600">
+      </div>
+      <div class="field" style="max-width:150px">
+        <span class="field-label">Packet Size (B)</span>
+        <input type="number" id="pingSize" min="8" max="65507" value="64">
+      </div>
+      <button class="run-btn" id="pingRunBtn" onclick="startPing()">
+        <span id="pingBtnDot"></span> Run Ping
+      </button>
+      <button class="stop-btn" id="pingStopBtn" onclick="stopPing()" style="display:none">Stop</button>
+    </div>
+  </div>
+
+  <!-- Stats bar -->
+  <div class="stats-bar" id="pingStatsBar">
+    <div class="stat-chip"><span class="stat-label">Sent</span><span class="stat-val" id="sSent">0</span></div>
+    <div class="stat-chip"><span class="stat-label">Recv</span><span class="stat-val good" id="sRecv">0</span></div>
+    <div class="stat-chip"><span class="stat-label">Loss</span><span class="stat-val" id="sLoss">0%</span></div>
+    <div class="stat-chip"><span class="stat-label">Min</span><span class="stat-val good" id="sMin">&mdash;</span></div>
+    <div class="stat-chip"><span class="stat-label">Avg</span><span class="stat-val" id="sAvg">&mdash;</span></div>
+    <div class="stat-chip"><span class="stat-label">Max</span><span class="stat-val" id="sMax">&mdash;</span></div>
+    <div class="stat-chip"><span class="stat-label">Jitter</span><span class="stat-val" id="sJitter">&mdash;</span></div>
+    <div class="stat-chip"><span class="stat-label">TTL</span><span class="stat-val" id="sTTL">&mdash;</span></div>
+  </div>
+
+  <!-- Tabs -->
+  <div class="tabs" id="pingTabs">
+    <button class="tab active" onclick="showPingTab(this,'ptimeline')">Timeline</button>
+    <button class="tab" onclick="showPingTab(this,'prtt')">RTT Chart</button>
+    <button class="tab" onclick="showPingTab(this,'pjitter')">Jitter</button>
+    <button class="tab" onclick="showPingTab(this,'plog')">Log</button>
+    <button class="tab" onclick="showPingTab(this,'pglossary')">Glossary</button>
+  </div>
+
+  <div class="tab-panel active card" id="tab-ptimeline">
+    <div class="card-title">Response Time Timeline</div>
+    <div class="legend">
+      <div class="legend-item"><div class="legend-dot" style="background:var(--ping-good)"></div>&lt; 50ms — Excellent</div>
+      <div class="legend-item"><div class="legend-dot" style="background:var(--ping-ok)"></div>50–150ms — Acceptable</div>
+      <div class="legend-item"><div class="legend-dot" style="background:var(--ping-bad)"></div>&gt;150ms — High Latency</div>
+      <div class="legend-item"><div class="legend-dot" style="background:var(--ping-timeout)"></div>Timeout</div>
+    </div>
+    <div class="ping-timeline" id="pingTimeline"><div class="empty-state"><span class="icon">&#x25B6;</span>Run a ping to see the timeline</div></div>
+  </div>
+
+  <div class="tab-panel card" id="tab-prtt">
+    <div class="card-title">Round-Trip Time Chart</div>
+    <canvas id="rttCanvas" height="200"></canvas>
+  </div>
+
+  <div class="tab-panel card" id="tab-pjitter">
+    <div class="card-title">Jitter Analysis</div>
+    <canvas id="jitterCanvas" height="200"></canvas>
+    <p style="font-family:'JetBrains Mono',monospace;font-size:10px;color:var(--text-muted);margin-top:8px;">Jitter = absolute difference between consecutive RTT values. Lower is better for real-time applications.</p>
+  </div>
+
+  <div class="tab-panel card" id="tab-plog">
+    <div class="card-title">Ping Log</div>
+    <div class="ping-log" id="pingLog"><div class="empty-state" style="padding:20px"><span class="icon">&#x1F4CB;</span>Log will appear here</div></div>
+  </div>
+
+  <div class="tab-panel card" id="tab-pglossary">
+    <div class="card-title">Ping Terminology</div>
+    <div class="glossary-grid" id="pingGlossary"></div>
+  </div>
+</div>
+
+<!-- ═══ TRACEROUTE MODE ═══ -->
+<div id="traceMode" style="display:none">
+  <div class="card">
+    <div class="card-title">Traceroute Configuration</div>
+    <div class="input-row">
+      <div class="field">
+        <span class="field-label">Target Host / IP</span>
+        <input type="text" id="traceHost" placeholder="e.g. 8.8.8.8 or cloudflare.com" value="8.8.8.8">
+        <span class="field-hint">Hostname or IPv4 address</span>
+      </div>
+      <div class="field" style="max-width:150px">
+        <span class="field-label">Max Hops</span>
+        <input type="number" id="traceMaxHops" min="1" max="64" value="30">
+      </div>
+      <div class="field" style="max-width:170px">
+        <span class="field-label">Probes per Hop</span>
+        <input type="number" id="traceProbes" min="1" max="5" value="3">
+      </div>
+      <div class="field" style="max-width:160px">
+        <span class="field-label">Network Profile</span>
+        <select id="traceProfile">
+          <option value="lan">Local LAN</option>
+          <option value="city">Same City ISP</option>
+          <option value="national" selected>National</option>
+          <option value="international">International</option>
+          <option value="lossy">Lossy / Degraded</option>
+        </select>
+      </div>
+      <button class="run-btn" id="traceRunBtn" onclick="startTrace()">
+        <span id="traceBtnDot"></span> Run Traceroute
+      </button>
+      <button class="stop-btn" id="traceStopBtn" onclick="stopTrace()" style="display:none">Stop</button>
+    </div>
+  </div>
+
+  <!-- Tabs -->
+  <div class="tabs" id="traceTabs">
+    <button class="tab active" onclick="showTraceTab(this,'ttable')">Hop Table</button>
+    <button class="tab" onclick="showTraceTab(this,'tdiagram')">Path Diagram</button>
+    <button class="tab" onclick="showTraceTab(this,'tglossary')">Glossary</button>
+  </div>
+
+  <div class="tab-panel active card" id="tab-ttable">
+    <div class="card-title">Hop Analysis</div>
+    <div id="traceTableWrap"><div class="empty-state"><span class="icon">&#x25B6;</span>Run a traceroute to see the path</div></div>
+  </div>
+
+  <div class="tab-panel card" id="tab-tdiagram">
+    <div class="card-title">Visual Path Diagram</div>
+    <canvas id="traceCanvas" height="500"></canvas>
+  </div>
+
+  <div class="tab-panel card" id="tab-tglossary">
+    <div class="card-title">Traceroute Terminology</div>
+    <div class="glossary-grid" id="traceGlossary"></div>
+  </div>
+</div>
+
+<footer>Ping &amp; Traceroute Visualizer &middot; Simulated Network Diagnostic Tool</footer>
+</div>
+
+<script>
+// ══════════════════════════════════════════
+//  HELPERS
+// ══════════════════════════════════════════
+const rnd=(a,b)=>Math.random()*(b-a)+a;
+const rndInt=(a,b)=>Math.floor(rnd(a,b+1));
+const clamp=(v,a,b)=>Math.max(a,Math.min(b,v));
+const msClass=ms=>ms===null?'timeout':ms<50?'good':ms<150?'ok':'bad';
+
+// ══════════════════════════════════════════
+//  SIMULATED NETWORK PROFILES
+// ══════════════════════════════════════════
+const profiles={
+  ping:{
+    '8.8.8.8':   {base:14, jitter:4, loss:0,   ttl:118},
+    '1.1.1.1':   {base:10, jitter:3, loss:0,   ttl:58},
+    '192.168.1.1':{base:1, jitter:1, loss:0,   ttl:64},
+    'google.com':{base:18, jitter:6, loss:1,   ttl:116},
+    'cloudflare.com':{base:12,jitter:4,loss:0, ttl:59},
+    'default':   {base:35, jitter:15,loss:3,   ttl:52},
+  }
+};
+
+function getPingProfile(host){
+  const h=host.trim().toLowerCase();
+  return profiles.ping[h]||profiles.ping['default'];
+}
+
+function simulatePing(host,seq,prof){
+  if(Math.random()*100<prof.loss)return null;
+  const base=prof.base,jit=prof.jitter;
+  // occasional spike
+  const spike=Math.random()<0.05?rnd(80,300):0;
+  return Math.max(0.1,base+rnd(-jit,jit)+spike);
+}
+
+// ══════════════════════════════════════════
+//  PING STATE
+// ══════════════════════════════════════════
+let pingRunning=false,pingTimer=null,pingResults=[],pingSeq=0,pingTotal=0;
+
+function startPing(){
+  const host=document.getElementById('pingHost').value.trim();
+  if(!host){alert('Please enter a target host.');return}
+  pingTotal=parseInt(document.getElementById('pingCount').value)||20;
+  const interval=Math.max(100,parseInt(document.getElementById('pingInterval').value)||600);
+  const prof=getPingProfile(host);
+  pingResults=[];pingSeq=0;pingRunning=true;
+  document.getElementById('pingRunBtn').style.display='none';
+  document.getElementById('pingStopBtn').style.display='flex';
+  document.getElementById('pingTimeline').innerHTML='';
+  document.getElementById('pingLog').innerHTML='';
+  document.getElementById('sTTL').textContent=prof.ttl;
+  updatePingStats();
+
+  const tick=()=>{
+    if(!pingRunning||pingSeq>=pingTotal){stopPing(true);return}
+    pingSeq++;
+    const ms=simulatePing(host,pingSeq,prof);
+    pingResults.push({seq:pingSeq,ms,host});
+    addPingBar(pingSeq,ms);
+    addPingLogLine(pingSeq,ms,host,prof.ttl,parseInt(document.getElementById('pingSize').value)||64);
+    updatePingStats();
+    drawRTTChart();
+    drawJitterChart();
+    pingTimer=setTimeout(tick,interval);
+  };
+  tick();
+}
+
+function stopPing(finished){
+  pingRunning=false;clearTimeout(pingTimer);
+  document.getElementById('pingRunBtn').style.display='flex';
+  document.getElementById('pingStopBtn').style.display='none';
+  if(pingResults.length>0&&!finished){
+    const el=document.getElementById('pingLog');
+    el.innerHTML+=`<div class="log-line"><span class="log-info">--- ping stopped by user ---</span></div>`;
+    el.scrollTop=el.scrollHeight;
+  }
+  updatePingStats();
+  drawRTTChart();
+  drawJitterChart();
+}
+
+function addPingBar(seq,ms){
+  const tl=document.getElementById('pingTimeline');
+  // Remove empty state
+  const es=tl.querySelector('.empty-state');if(es)es.remove();
+  const maxMs=200;
+  const h=ms===null?8:clamp(Math.round((ms/maxMs)*88),4,92);
+  const cls=msClass(ms);
+  const tip=ms===null?`#${seq}: Timeout`:`#${seq}: ${ms.toFixed(1)}ms`;
+  const wrap=document.createElement('div');wrap.className='ping-bar-wrap';
+  wrap.innerHTML=`<div class="ping-bar ${cls}" style="height:${h}px" data-tip="${tip}" title="${tip}"></div><span class="ping-seq">${seq}</span>`;
+  tl.appendChild(wrap);
+  tl.scrollLeft=tl.scrollWidth;
+}
+
+function addPingLogLine(seq,ms,host,ttl,size){
+  const el=document.getElementById('pingLog');
+  const es=el.querySelector('.empty-state');if(es)es.remove();
+  const cls=msClass(ms);
+  const msText=ms===null?'<span class="log-ms timeout">timeout</span>':`<span class="log-ms ${cls}">${ms.toFixed(1)} ms</span>`;
+  el.innerHTML+=`<div class="log-line">
+    <span class="log-seq">[${String(seq).padStart(3,' ')}]</span>
+    <span class="log-host">${size}B → ${host}</span>
+    ${msText}
+    <span class="log-ttl">TTL=${ttl}</span>
+  </div>`;
+  el.scrollTop=el.scrollHeight;
+}
+
+function updatePingStats(){
+  const good=pingResults.filter(r=>r.ms!==null);
+  const sent=pingResults.length,recv=good.length;
+  const loss=sent>0?Math.round((sent-recv)/sent*100):0;
+  const ms=good.map(r=>r.ms);
+  const mn=ms.length?Math.min(...ms):null;
+  const mx=ms.length?Math.max(...ms):null;
+  const avg=ms.length?ms.reduce((a,b)=>a+b,0)/ms.length:null;
+  // Jitter = mean of abs differences
+  let jit=null;
+  if(ms.length>1){const diffs=ms.slice(1).map((v,i)=>Math.abs(v-ms[i]));jit=diffs.reduce((a,b)=>a+b,0)/diffs.length}
+
+  document.getElementById('sSent').textContent=sent;
+  document.getElementById('sRecv').textContent=recv;
+  const lossEl=document.getElementById('sLoss');lossEl.textContent=loss+'%';
+  lossEl.className='stat-val '+(loss===0?'good':loss<5?'ok':'bad');
+  document.getElementById('sMin').textContent=mn!==null?mn.toFixed(1)+'ms':'—';
+  const avgEl=document.getElementById('sAvg');avgEl.textContent=avg!==null?avg.toFixed(1)+'ms':'—';
+  avgEl.className='stat-val '+(avg===null?'':(avg<50?'good':avg<150?'ok':'bad'));
+  document.getElementById('sMax').textContent=mx!==null?mx.toFixed(1)+'ms':'—';
+  const jEl=document.getElementById('sJitter');jEl.textContent=jit!==null?jit.toFixed(1)+'ms':'—';
+  jEl.className='stat-val '+(jit===null?'':(jit<5?'good':jit<20?'ok':'bad'));
+}
+
+// ── RTT Line Chart ─────────────────────────────────────────
+function drawRTTChart(){
+  const canvas=document.getElementById('rttCanvas');
+  canvas.width=canvas.offsetWidth||800;
+  const ctx=canvas.getContext('2d'),W=canvas.width,H=canvas.height;
+  ctx.clearRect(0,0,W,H);
+  ctx.fillStyle='#0d1117';ctx.fillRect(0,0,W,H);
+  const data=pingResults;if(data.length===0)return;
+  const pad={t:20,r:20,b:30,l:55};
+  const cw=W-pad.l-pad.r,ch=H-pad.t-pad.b;
+  const ms=data.map(d=>d.ms).filter(v=>v!==null);
+  const maxMs=ms.length?Math.max(...ms,100):100;
+  // Grid lines
+  ctx.strokeStyle='rgba(46,168,224,.08)';ctx.lineWidth=1;
+  for(let i=0;i<=4;i++){const y=pad.t+ch*(i/4);ctx.beginPath();ctx.moveTo(pad.l,y);ctx.lineTo(pad.l+cw,y);ctx.stroke()}
+  // Y labels
+  ctx.fillStyle='#484f58';ctx.font="9px 'JetBrains Mono',monospace";ctx.textAlign='right';
+  for(let i=0;i<=4;i++){const v=Math.round(maxMs*(1-i/4));ctx.fillText(v+'ms',pad.l-6,pad.t+ch*(i/4)+3)}
+  // Threshold lines
+  const drawThresh=(ms2,col)=>{const y=pad.t+ch*(1-ms2/maxMs);ctx.strokeStyle=col;ctx.lineWidth=1;ctx.setLineDash([4,4]);ctx.beginPath();ctx.moveTo(pad.l,y);ctx.lineTo(pad.l+cw,y);ctx.stroke();ctx.setLineDash([])};
+  if(50<=maxMs)drawThresh(50,'rgba(63,185,80,.25)');
+  if(150<=maxMs)drawThresh(150,'rgba(248,81,73,.25)');
+  // Area fill
+  const xStep=data.length>1?cw/(data.length-1):cw;
+  ctx.beginPath();
+  let first=true;
+  data.forEach((d,i)=>{if(d.ms===null)return;const x=pad.l+i*xStep;const y=pad.t+ch*(1-d.ms/maxMs);if(first){ctx.moveTo(x,y);first=false}else ctx.lineTo(x,y)});
+  ctx.strokeStyle='var(--accent)';ctx.lineWidth=2;ctx.stroke();
+  // Gradient fill
+  const grad=ctx.createLinearGradient(0,pad.t,0,pad.t+ch);
+  grad.addColorStop(0,'rgba(46,168,224,.25)');grad.addColorStop(1,'rgba(46,168,224,.0)');
+  ctx.lineTo(pad.l+(data.length-1)*xStep,pad.t+ch);ctx.lineTo(pad.l,pad.t+ch);ctx.closePath();
+  ctx.fillStyle=grad;ctx.fill();
+  // Dots
+  data.forEach((d,i)=>{if(d.ms===null)return;const x=pad.l+i*xStep;const y=pad.t+ch*(1-d.ms/maxMs);
+    ctx.beginPath();ctx.arc(x,y,3,0,Math.PI*2);ctx.fillStyle=d.ms<50?'var(--ping-good)':d.ms<150?'var(--ping-ok)':'var(--ping-bad)';ctx.fill()});
+  // X labels
+  ctx.fillStyle='#484f58';ctx.font="9px 'JetBrains Mono',monospace";ctx.textAlign='center';
+  const step=Math.max(1,Math.floor(data.length/8));
+  data.forEach((d,i)=>{if(i%step===0)ctx.fillText('#'+d.seq,pad.l+i*xStep,H-8)});
+}
+
+// ── Jitter Chart ───────────────────────────────────────────
+function drawJitterChart(){
+  const canvas=document.getElementById('jitterCanvas');
+  canvas.width=canvas.offsetWidth||800;
+  const ctx=canvas.getContext('2d'),W=canvas.width,H=canvas.height;
+  ctx.clearRect(0,0,W,H);
+  ctx.fillStyle='#0d1117';ctx.fillRect(0,0,W,H);
+  const ms=pingResults.filter(r=>r.ms!==null).map(r=>r.ms);
+  if(ms.length<2)return;
+  const jitters=ms.slice(1).map((v,i)=>Math.abs(v-ms[i]));
+  const pad={t:20,r:20,b:30,l:55};
+  const cw=W-pad.l-pad.r,ch=H-pad.t-pad.b;
+  const maxJ=Math.max(...jitters,20);
+  const xStep=jitters.length>1?cw/(jitters.length-1):cw;
+  ctx.strokeStyle='rgba(210,153,34,.08)';ctx.lineWidth=1;
+  for(let i=0;i<=4;i++){const y=pad.t+ch*(i/4);ctx.beginPath();ctx.moveTo(pad.l,y);ctx.lineTo(pad.l+cw,y);ctx.stroke()}
+  ctx.fillStyle='#484f58';ctx.font="9px 'JetBrains Mono',monospace";ctx.textAlign='right';
+  for(let i=0;i<=4;i++){const v=Math.round(maxJ*(1-i/4));ctx.fillText(v+'ms',pad.l-6,pad.t+ch*(i/4)+3)}
+  // Bars
+  const bw=Math.max(2,xStep-2);
+  jitters.forEach((j,i)=>{
+    const x=pad.l+i*xStep-bw/2,y=pad.t+ch*(1-j/maxJ),bh2=ch*(j/maxJ);
+    ctx.fillStyle=j<5?'rgba(63,185,80,.7)':j<20?'rgba(210,153,34,.7)':'rgba(248,81,73,.7)';
+    ctx.fillRect(x,y,bw,bh2)});
+  // Avg line
+  const avg=jitters.reduce((a,b)=>a+b,0)/jitters.length;
+  const ay=pad.t+ch*(1-avg/maxJ);
+  ctx.strokeStyle='rgba(46,168,224,.6)';ctx.lineWidth=1.5;ctx.setLineDash([6,4]);
+  ctx.beginPath();ctx.moveTo(pad.l,ay);ctx.lineTo(pad.l+cw,ay);ctx.stroke();ctx.setLineDash([]);
+  ctx.fillStyle='#2ea8e0';ctx.font="9px 'JetBrains Mono',monospace";ctx.textAlign='left';
+  ctx.fillText('avg '+avg.toFixed(1)+'ms',pad.l+4,ay-4);
+}
+
+// ══════════════════════════════════════════
+//  TRACEROUTE SIMULATION
+// ══════════════════════════════════════════
+const traceProfiles={
+  lan:{hops:[
+    {ip:'192.168.1.1',host:'gateway.home',base:1,jit:.5,status:'private'},
+    {ip:'10.0.0.1',host:'modem.isp',base:3,jit:1,status:'private'},
+  ],dest:{base:4,jit:1}},
+  city:{hops:[
+    {ip:'192.168.1.1',host:'gateway.home',base:1,jit:.5,status:'private'},
+    {ip:'10.10.1.1',host:'dslam.isp.local',base:8,jit:2,status:'private'},
+    {ip:'72.14.200.1',host:'core1.city.isp.net',base:12,jit:3,status:'transit'},
+    {ip:'72.14.201.5',host:'ae1.edge.city.isp.net',base:16,jit:3,status:'transit'},
+  ],dest:{base:18,jit:4}},
+  national:{hops:[
+    {ip:'192.168.1.1',host:'gateway.local',base:1,jit:.5,status:'private'},
+    {ip:'10.100.1.1',host:'bras1.isp.local',base:6,jit:2,status:'private'},
+    {ip:'68.86.90.1',host:'te0-3.cr1.pop1.isp.net',base:14,jit:3,status:'transit'},
+    {ip:'68.86.91.2',host:'te0-1.cr2.pop2.isp.net',base:22,jit:4,status:'transit'},
+    {ip:'154.54.12.1',host:'xe-0.pe1.core.net',base:30,jit:5,status:'transit'},
+    {ip:'154.54.13.6',host:'xe-2.pe2.edge.net',base:35,jit:5,status:'transit'},
+    {ip:'216.239.48.1',host:'209.85.142.101',base:40,jit:6,status:'transit'},
+  ],dest:{base:44,jit:8}},
+  international:{hops:[
+    {ip:'192.168.1.1',host:'gateway.local',base:1,jit:.5,status:'private'},
+    {ip:'10.100.1.1',host:'bras1.isp.local',base:6,jit:2,status:'private'},
+    {ip:'68.86.90.1',host:'te0.cr1.domestic.net',base:14,jit:3,status:'transit'},
+    {ip:'68.86.91.2',host:'te0.cr2.gw.net',base:22,jit:4,status:'transit'},
+    {ip:'154.54.12.1',host:'xe.pe1.transatlantic.net',base:85,jit:8,status:'transit'},
+    {ip:'154.54.56.2',host:'xe.pe2.ams.net',base:92,jit:9,status:'transit'},
+    {ip:'80.231.100.1',host:'ae1.edge.eu.net',base:100,jit:10,status:'transit'},
+    {ip:'80.231.101.5',host:'ae2.pop.eu.isp.net',base:108,jit:10,status:'transit'},
+    {ip:'216.58.200.1',host:'den01s08-in-f14.net',base:115,jit:12,status:'transit'},
+  ],dest:{base:118,jit:12}},
+  lossy:{hops:[
+    {ip:'192.168.1.1',host:'gateway.local',base:2,jit:2,status:'private'},
+    {ip:'10.10.2.1',host:'bras.degraded.isp',base:40,jit:30,status:'private',loss:.3},
+    {ip:'68.86.90.1',host:'cr1.congested.net',base:90,jit:60,status:'transit',loss:.2,timeout:.15},
+    {ip:'null',host:'*',base:null,jit:0,status:'timeout',loss:1},
+    {ip:'154.54.12.1',host:'pe1.unstable.net',base:130,jit:80,status:'transit',loss:.2},
+    {ip:'216.239.48.1',host:'edge.lossy.net',base:180,jit:90,status:'transit',loss:.1},
+  ],dest:{base:200,jit:50,loss:.05}},
+};
+
+function getTraceProfile(){
+  const prof=document.getElementById('traceProfile').value;
+  return traceProfiles[prof]||traceProfiles['national'];
+}
+
+let traceRunning=false,traceTimer=null,traceHops=[];
+
+function startTrace(){
+  const host=document.getElementById('traceHost').value.trim();
+  if(!host){alert('Please enter a target host.');return}
+  traceRunning=true;traceHops=[];
+  document.getElementById('traceRunBtn').style.display='none';
+  document.getElementById('traceStopBtn').style.display='flex';
+  document.getElementById('traceTableWrap').innerHTML='';
+  const prof=getTraceProfile();
+  const probesN=parseInt(document.getElementById('traceProbes').value)||3;
+  const maxHops=parseInt(document.getElementById('traceMaxHops').value)||30;
+  const allHops=[...prof.hops];
+  // Destination hop
+  allHops.push({ip:host.match(/^\d/)?host:'8.8.8.8',host:host,base:prof.dest.base,jit:prof.dest.jit,status:'reached',loss:prof.dest.loss||0});
+  const limited=allHops.slice(0,maxHops);
+  let idx=0;
+  const table=document.createElement('table');table.className='hop-table';
+  table.innerHTML=`<thead><tr><th>Hop</th><th>IP / Host</th><th>RTT 1</th><th>RTT 2</th><th>RTT 3</th><th>Avg RTT</th><th>Latency Bar</th><th>Status</th></tr></thead>`;
+  const tbody=document.createElement('tbody');table.appendChild(tbody);
+  document.getElementById('traceTableWrap').appendChild(table);
+
+  const maxBaseMs=allHops.reduce((a,h)=>Math.max(a,h.base||0),0)||200;
+
+  const tick=()=>{
+    if(!traceRunning||idx>=limited.length){stopTrace(true);return}
+    const hop=limited[idx];idx++;
+    const rtts=[];
+    for(let p=0;p<probesN;p++){
+      if(hop.status==='timeout'||Math.random()<(hop.loss||0)){rtts.push(null)}
+      else{rtts.push(hop.base+rnd(-hop.jit,hop.jit)+Math.random()*0.5)}
+    }
+    const goodRtts=rtts.filter(v=>v!==null);
+    const avg=goodRtts.length?goodRtts.reduce((a,b)=>a+b,0)/goodRtts.length:null;
+    traceHops.push({num:idx,hop,rtts,avg});
+    const rttCell=(v,p)=>{
+      if(v===null)return`<td><span class="hop-rtt" style="color:var(--ping-timeout)">*</span></td>`;
+      const cls=msClass(v);
+      return`<td><span class="hop-rtt ${cls}">${v.toFixed(1)}<span style="font-size:9px;color:var(--text-muted)">ms</span></span></td>`};
+    const barPct=avg!==null?Math.round((avg/maxBaseMs)*100):0;
+    const barCol=avg===null?'var(--text-muted)':avg<50?'var(--ping-good)':avg<150?'var(--ping-ok)':'var(--ping-bad)';
+    const ipDisplay=hop.status==='timeout'?'*':hop.ip;
+    const hostDisplay=hop.status==='timeout'?'Request timed out':(hop.host&&hop.host!==hop.ip?`<div class="hop-host">${hop.host}</div>`:'');
+    const tr=document.createElement('tr');
+    tr.innerHTML=`
+      <td><span class="hop-num">${idx}</span></td>
+      <td><span class="hop-ip">${ipDisplay}</span>${hostDisplay}</td>
+      ${rttCell(rtts[0])}${probesN>1?rttCell(rtts[1]||null):'<td style="color:var(--text-muted)">—</td>'}${probesN>2?rttCell(rtts[2]||null):'<td style="color:var(--text-muted)">—</td>'}
+      <td>${avg!==null?`<span class="hop-rtt ${msClass(avg)}">${avg.toFixed(1)}ms</span>`:'<span style="color:var(--ping-timeout)">*</span>'}</td>
+      <td class="hop-bar-cell"><div class="hop-bar-bg"><div class="hop-bar-fill" style="width:${barPct}%;background:${barCol}"></div></div></td>
+      <td><span class="hop-status ${hop.status}">${hop.status}</span></td>`;
+    tbody.appendChild(tr);
+    // scroll
+    tr.scrollIntoView({behavior:'smooth',block:'nearest'});
+    // Update diagram
+    const activeTraceTab=document.querySelector('#traceTabs .tab.active');
+    if(activeTraceTab&&activeTraceTab.textContent.trim()==='Path Diagram')renderTraceDiagram();
+    traceTimer=setTimeout(tick,400+rnd(0,200));
+  };
+  tick();
+}
+
+function stopTrace(finished){
+  traceRunning=false;clearTimeout(traceTimer);
+  document.getElementById('traceRunBtn').style.display='flex';
+  document.getElementById('traceStopBtn').style.display='none';
+  renderTraceDiagram();
+}
+
+// ── Trace Diagram ──────────────────────────────────────────
+function renderTraceDiagram(){
+  const canvas=document.getElementById('traceCanvas');
+  canvas.width=canvas.offsetWidth||800;
+  const ctx=canvas.getContext('2d'),W=canvas.width,H=canvas.height;
+  ctx.clearRect(0,0,W,H);
+  if(traceHops.length===0)return;
+  ctx.fillStyle='#0d1117';ctx.fillRect(0,0,W,H);
+  ctx.strokeStyle='rgba(46,168,224,.06)';ctx.lineWidth=1;
+  for(let x=0;x<W;x+=40){ctx.beginPath();ctx.moveTo(x,0);ctx.lineTo(x,H);ctx.stroke()}
+  for(let y=0;y<H;y+=40){ctx.beginPath();ctx.moveTo(0,y);ctx.lineTo(W,y);ctx.stroke()}
+  const mono="'JetBrains Mono',monospace",sans="'Rajdhani',sans-serif";
+  const n=traceHops.length;const padT=24,padB=20,padL=30,padR=30;
+  const ch=H-padT-padB;const rowH=ch/Math.max(n,1);
+  const nodeX=W/2;const lineX1=60,lineX2=W-60;
+  const maxAvg=Math.max(...traceHops.map(h=>h.avg||0),50);
+
+  traceHops.forEach((h,i)=>{
+    const y=padT+i*rowH+rowH/2;
+    const {hop,rtts,avg}=h;
+    const col=hop.status==='reached'?'var(--ping-good)':hop.status==='timeout'?'var(--text-muted)':hop.status==='private'?'var(--warning)':'var(--accent)';
+
+    // Connecting line from previous
+    if(i>0){
+      const prevY=padT+(i-1)*rowH+rowH/2;
+      ctx.strokeStyle='rgba(46,168,224,.2)';ctx.lineWidth=1.5;ctx.setLineDash([3,4]);
+      ctx.beginPath();ctx.moveTo(nodeX,prevY+12);ctx.lineTo(nodeX,y-12);ctx.stroke();ctx.setLineDash([]);
+    }
+
+    // Node circle
+    ctx.fillStyle=col==='var(--ping-good)'?'rgba(63,185,80,.15)':hop.status==='timeout'?'rgba(72,79,88,.15)':hop.status==='private'?'rgba(210,153,34,.15)':'rgba(46,168,224,.12)';
+    ctx.strokeStyle=col;ctx.lineWidth=1.5;
+    ctx.beginPath();ctx.arc(nodeX,y,11,0,Math.PI*2);ctx.fill();ctx.stroke();
+    ctx.fillStyle=col;ctx.font=`bold 10px ${mono}`;ctx.textAlign='center';ctx.fillText(h.num,nodeX,y+4);
+
+    // Hop number badge (left)
+    ctx.fillStyle='#484f58';ctx.font=`10px ${mono}`;ctx.textAlign='right';
+    ctx.fillText('TTL '+h.num,nodeX-22,y+4);
+
+    // IP + host (right side)
+    ctx.fillStyle=col;ctx.font=`bold 11px ${mono}`;ctx.textAlign='left';
+    ctx.fillText(hop.status==='timeout'?'*':hop.ip,nodeX+20,y-2);
+    if(hop.host&&hop.host!==hop.ip&&hop.status!=='timeout'){
+      ctx.fillStyle='#8b949e';ctx.font=`10px ${mono}`;ctx.fillText(hop.host,nodeX+20,y+12)}
+
+    // RTT bar (left side)
+    const barMaxW=lineX2-10-nodeX-30;
+    if(avg!==null){
+      const bw=Math.max(4,Math.round((avg/maxAvg)*(W/2-80)));
+      const bx=lineX1;const by=y-4;
+      ctx.fillStyle='rgba(46,168,224,.08)';ctx.fillRect(bx,by,W/2-80,8);
+      const bc=avg<50?'rgba(63,185,80,.7)':avg<150?'rgba(210,153,34,.7)':'rgba(248,81,73,.7)';
+      ctx.fillStyle=bc;ctx.fillRect(bx,by,bw,8);
+      ctx.fillStyle='#8b949e';ctx.font=`9px ${mono}`;ctx.textAlign='right';
+      ctx.fillText(avg.toFixed(1)+'ms',bx-4,y+4);
+    }else{
+      ctx.fillStyle='#484f58';ctx.font=`9px ${mono}`;ctx.textAlign='right';ctx.fillText('*',lineX1-4,y+4)}
+  });
+
+  // Legend
+  const items=[['Transit',''+(traceHops.filter(h=>h.hop.status==='transit').length),'var(--accent)'],
+    ['Private',''+(traceHops.filter(h=>h.hop.status==='private').length),'var(--warning)'],
+    ['Timeout',''+(traceHops.filter(h=>h.hop.status==='timeout').length),'var(--text-muted)'],
+    ['Destination',''+(traceHops.filter(h=>h.hop.status==='reached').length),'var(--ping-good)']];
+  let lx=padL;
+  ctx.font=`9px ${mono}`;
+  items.forEach(([l,v,c])=>{
+    ctx.fillStyle=c;ctx.beginPath();ctx.arc(lx+4,H-12,4,0,Math.PI*2);ctx.fill();
+    ctx.fillStyle='#8b949e';ctx.textAlign='left';ctx.fillText(`${l}: ${v}`,lx+12,H-8);lx+=80});
+}
+
+// ══════════════════════════════════════════
+//  TABS
+// ══════════════════════════════════════════
+function showPingTab(btn,name){
+  document.querySelectorAll('#pingMode .tab-panel').forEach(p=>p.classList.remove('active'));
+  document.querySelectorAll('#pingTabs .tab').forEach(t=>t.classList.remove('active'));
+  document.getElementById('tab-'+name).classList.add('active');btn.classList.add('active');
+  if(name==='prtt')drawRTTChart();
+  if(name==='pjitter')drawJitterChart();
+}
+function showTraceTab(btn,name){
+  document.querySelectorAll('#traceMode .tab-panel').forEach(p=>p.classList.remove('active'));
+  document.querySelectorAll('#traceTabs .tab').forEach(t=>t.classList.remove('active'));
+  document.getElementById('tab-'+name).classList.add('active');btn.classList.add('active');
+  if(name==='tdiagram')renderTraceDiagram();
+}
+
+// ══════════════════════════════════════════
+//  MODE SWITCH
+// ══════════════════════════════════════════
+function setMode(m){
+  document.getElementById('pingMode').style.display=m==='ping'?'block':'none';
+  document.getElementById('traceMode').style.display=m==='trace'?'block':'none';
+  document.getElementById('modePing').classList.toggle('active',m==='ping');
+  document.getElementById('modeTrace').classList.toggle('active',m==='trace');
+}
+
+// ══════════════════════════════════════════
+//  GLOSSARIES
+// ══════════════════════════════════════════
+const pingGlossary=[
+  ['Ping','A network diagnostic command that sends ICMP Echo Request packets to a host and measures the round-trip time (RTT) for replies.'],
+  ['Round-Trip Time (RTT)','The time taken for a packet to travel from source to destination and back. Measured in milliseconds (ms).'],
+  ['ICMP','Internet Control Message Protocol — the layer-3 protocol used by ping. Echo Request (type 8) and Echo Reply (type 0) are the key message types.'],
+  ['TTL (Time To Live)','A counter in each IP packet decremented by 1 at every router hop. When it reaches 0 the packet is dropped, preventing infinite loops.'],
+  ['Packet Loss','The percentage of sent packets that never receive a reply. Any loss above 0% indicates network problems or firewall filtering.'],
+  ['Jitter','Variation in round-trip time between consecutive packets. High jitter degrades real-time applications like VoIP and video calls.'],
+  ['Latency','The delay experienced by a packet traveling through the network. Affected by distance, routing, and congestion.'],
+  ['Timeout','A ping response that never arrives within the wait period. May indicate a dropped packet, firewall block, or host unreachable.'],
+  ['Packet Size','The size in bytes of the ICMP payload sent. Default is 56 bytes (64 with header). Larger packets reveal MTU issues.'],
+  ['Min / Avg / Max','Statistical summary of RTT values. Min = best case, Avg = typical experience, Max = worst spike observed.'],
+  ['ICMP Flood','Sending a very high rate of pings to a host, historically used as a DoS attack. Modern firewalls rate-limit ICMP.'],
+  ['Ping of Death','A historical attack using oversized ICMP packets (>65,535 bytes) to crash unpatched systems. Fully mitigated in modern OS.'],
+];
+document.getElementById('pingGlossary').innerHTML=pingGlossary.map(([t,d])=>`<div class="glossary-item"><div class="glossary-term">${t}</div><div class="glossary-def">${d}</div></div>`).join('');
+
+const traceGlossary=[
+  ['Traceroute','A diagnostic tool that maps the path packets take to a destination by sending probes with increasing TTL values, recording each router hop.'],
+  ['TTL (Time To Live)','Set to 1 for the first probe, 2 for the second, etc. Each router decrements TTL; when it hits 0 it sends back an ICMP Time Exceeded, revealing its IP.'],
+  ['Hop','Each router or network device along the path. Traceroute displays the IP address and RTT of every hop between source and destination.'],
+  ['ICMP Time Exceeded','The message a router sends back when it discards a packet because TTL reached 0. This is how traceroute discovers intermediate hops.'],
+  ['Asterisk (*)',`A hop that didn't respond within the timeout — either filtered ICMP, a router that doesn't send Time Exceeded, or packet loss.`],
+  ['Probe','A single test packet sent per hop. Standard traceroute sends 3 probes per TTL to provide multiple RTT samples and detect intermittent loss.'],
+  ['Private IP','RFC 1918 addresses (10.x, 172.16–31.x, 192.168.x) visible in the first few hops — your LAN gear, modem, and ISP equipment.'],
+  ['Transit Hop','A router belonging to an ISP or backbone provider routing your traffic between networks, typically showing public IP addresses.'],
+  ['Asymmetric Routing','Return path packets take a different route than outgoing packets. Common on the internet; makes RTT interpretation complex.'],
+  ['Network Latency','The cumulative delay added by each hop. Geographic distance (speed of light in fiber) and router processing both contribute.'],
+  ['Persistent Timeout','Several consecutive hops showing * may indicate a firewall blocking ICMP or a network segment that deprioritizes ICMP probes.'],
+  ['Last Hop (Destination)','The final entry in the traceroute, confirming the packet reached the target host and revealing the end-to-end RTT.'],
+];
+document.getElementById('traceGlossary').innerHTML=traceGlossary.map(([t,d])=>`<div class="glossary-item"><div class="glossary-term">${t}</div><div class="glossary-def">${d}</div></div>`).join('');
+
+// ══════════════════════════════════════════
+//  RESIZE
+// ══════════════════════════════════════════
+window.addEventListener('resize',()=>{drawRTTChart();drawJitterChart();renderTraceDiagram()});
+</script>
+</body>
+</html>

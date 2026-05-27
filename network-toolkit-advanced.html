@@ -1,0 +1,1004 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Network Toolkit — Advanced Tools</title>
+<link href="https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@300;400;500;600;700&family=Rajdhani:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+<style>
+:root{
+  --bg:#0d1117;--bg2:#161b22;--bg3:#1c2230;--bgi:#0d1117;
+  --bdr:#30363d;--bdra:#1e6fa8;--acc:#2ea8e0;--accg:rgba(46,168,224,.15);
+  --accb:#58c8f4;--tp:#e6edf3;--ts:#8b949e;--tm:#484f58;
+  --ok:#3fb950;--warn:#d29922;--err:#f85149;--gl:rgba(46,168,224,.06);
+}
+*{box-sizing:border-box;margin:0;padding:0}
+body{background:var(--bg);color:var(--tp);font-family:'Rajdhani',sans-serif;font-size:15px;min-height:100vh;
+  background-image:linear-gradient(var(--gl) 1px,transparent 1px),linear-gradient(90deg,var(--gl) 1px,transparent 1px);background-size:40px 40px}
+.app{max-width:1000px;margin:0 auto;padding:28px 18px 60px}
+
+/* Header */
+header{text-align:center;margin-bottom:26px}
+.hbadge{display:inline-block;font-family:'JetBrains Mono',monospace;font-size:10px;letter-spacing:3px;color:var(--acc);
+  background:var(--accg);border:1px solid var(--bdra);border-radius:2px;padding:3px 10px;margin-bottom:8px;text-transform:uppercase}
+header h1{font-size:34px;font-weight:700;letter-spacing:2px;
+  background:linear-gradient(135deg,var(--accb),var(--acc));-webkit-background-clip:text;-webkit-text-fill-color:transparent;background-clip:text;text-transform:uppercase}
+header p{color:var(--ts);font-size:12px;font-family:'JetBrains Mono',monospace;letter-spacing:1px;margin-top:5px}
+
+/* Tool nav */
+.tool-nav{display:flex;gap:0;justify-content:center;flex-wrap:wrap;border:1px solid var(--bdr);border-radius:8px;overflow:hidden;margin-bottom:24px;width:fit-content;margin-inline:auto}
+.tnav-btn{padding:10px 22px;font-family:'Rajdhani',sans-serif;font-size:13px;font-weight:600;letter-spacing:1px;cursor:pointer;
+  background:transparent;border:none;border-right:1px solid var(--bdr);color:var(--ts);transition:.2s;text-transform:uppercase;white-space:nowrap}
+.tnav-btn:last-child{border-right:none}
+.tnav-btn.active{background:var(--acc);color:#fff;box-shadow:0 0 14px var(--accg)}
+.tnav-btn:hover:not(.active){background:var(--accg);color:var(--acc)}
+
+/* Card */
+.card{background:var(--bg3);border:1px solid var(--bdr);border-radius:8px;padding:22px;margin-bottom:16px;position:relative;overflow:hidden}
+.card::before{content:'';position:absolute;top:0;left:0;right:0;height:2px;background:linear-gradient(90deg,transparent,var(--acc),transparent);opacity:.6}
+.ct{font-family:'JetBrains Mono',monospace;font-size:11px;letter-spacing:2px;text-transform:uppercase;color:var(--acc);
+  margin-bottom:16px;display:flex;align-items:center;gap:8px}
+.ct::after{content:'';flex:1;height:1px;background:linear-gradient(90deg,var(--bdra),transparent);opacity:.4}
+
+/* Fields */
+.irow{display:flex;gap:10px;align-items:flex-end;flex-wrap:wrap;margin-bottom:14px}
+.field{display:flex;flex-direction:column;gap:6px;flex:1;min-width:160px}
+.fl{font-family:'JetBrains Mono',monospace;font-size:10px;letter-spacing:1.5px;text-transform:uppercase;color:var(--ts)}
+.field input,.field select,.field textarea{background:var(--bgi);border:1px solid var(--bdr);border-radius:5px;color:var(--tp);
+  font-family:'JetBrains Mono',monospace;font-size:14px;padding:9px 13px;width:100%;outline:none;transition:.2s}
+.field input:focus,.field select:focus,.field textarea:focus{border-color:var(--acc);box-shadow:0 0 0 3px var(--accg)}
+.field textarea{resize:vertical;min-height:100px;line-height:1.6}
+.field select option{background:var(--bg2)}
+.fhint{font-family:'JetBrains Mono',monospace;font-size:10px;color:var(--tm)}
+.ferr{font-family:'JetBrains Mono',monospace;font-size:10px;color:var(--err);display:none}
+
+/* Buttons */
+.run-btn{padding:10px 24px;background:var(--acc);border:none;border-radius:5px;color:#fff;
+  font-family:'Rajdhani',sans-serif;font-weight:700;font-size:15px;letter-spacing:1px;cursor:pointer;transition:.2s;white-space:nowrap;align-self:flex-end}
+.run-btn:hover{background:var(--accb);box-shadow:0 0 16px var(--accg)}
+.clr-btn{padding:10px 18px;background:transparent;border:1px solid var(--bdr);border-radius:5px;color:var(--ts);
+  font-family:'Rajdhani',sans-serif;font-weight:600;font-size:14px;letter-spacing:1px;cursor:pointer;transition:.2s;white-space:nowrap;align-self:flex-end}
+.clr-btn:hover{border-color:var(--acc);color:var(--acc)}
+
+/* Results grid */
+.rg{display:flex;flex-direction:column;gap:2px}
+.rrow{display:grid;grid-template-columns:220px 1fr;gap:12px;padding:10px 13px;border-radius:5px;transition:background .15s;align-items:start}
+.rrow:hover{background:rgba(46,168,224,.05)}
+.rrow:nth-child(odd){background:rgba(255,255,255,.02)}
+.rrow:nth-child(odd):hover{background:rgba(46,168,224,.06)}
+.rk{font-family:'JetBrains Mono',monospace;font-size:11px;letter-spacing:.5px;color:var(--ts);text-transform:uppercase}
+.rv{font-family:'JetBrains Mono',monospace;font-size:13px;color:var(--accb);font-weight:500}
+.rv.empty{color:var(--tm);font-size:12px}
+
+/* Tables */
+.dtable{width:100%;border-collapse:collapse;font-family:'JetBrains Mono',monospace;font-size:12px}
+.dtable th{background:var(--bg2);color:var(--acc);font-size:10px;letter-spacing:1px;text-transform:uppercase;
+  padding:8px 12px;text-align:left;border-bottom:1px solid var(--bdr)}
+.dtable td{padding:8px 12px;border-bottom:1px solid rgba(48,54,61,.4);color:var(--tp)}
+.dtable tr:hover td{background:rgba(46,168,224,.04)}
+
+/* Chips / badges */
+.chip{font-family:'JetBrains Mono',monospace;font-size:10px;padding:3px 8px;border-radius:3px;display:inline-block;margin:1px}
+.chip.ok{background:rgba(63,185,80,.12);color:var(--ok);border:1px solid rgba(63,185,80,.3)}
+.chip.warn{background:rgba(210,153,34,.12);color:var(--warn);border:1px solid rgba(210,153,34,.3)}
+.chip.err{background:rgba(248,81,73,.12);color:var(--err);border:1px solid rgba(248,81,73,.3)}
+.chip.info{background:var(--accg);color:var(--acc);border:1px solid var(--bdra)}
+
+/* Canvas */
+.cvs{width:100%;border-radius:6px;background:var(--bgi);border:1px solid var(--bdr);display:block}
+
+/* Glossary */
+.ggl{display:grid;grid-template-columns:repeat(auto-fill,minmax(260px,1fr));gap:10px}
+.gi{background:var(--bgi);border:1px solid var(--bdr);border-radius:6px;padding:13px;transition:border-color .2s}
+.gi:hover{border-color:var(--bdra)}
+.gt{font-family:'JetBrains Mono',monospace;font-size:11px;font-weight:600;color:var(--acc);text-transform:uppercase;letter-spacing:1px;margin-bottom:5px}
+.gd{font-size:13px;color:var(--ts);line-height:1.55}
+
+/* DNS animation */
+@keyframes flow{0%{stroke-dashoffset:20}100%{stroke-dashoffset:0}}
+.flow-line{stroke-dasharray:5,4;animation:flow 1s linear infinite}
+@keyframes fadein{from{opacity:0;transform:translateY(6px)}to{opacity:1;transform:translateY(0)}}
+.fadein{animation:fadein .4s ease forwards}
+
+/* Bandwidth bars */
+.bw-bar-bg{height:12px;background:var(--bg2);border-radius:6px;overflow:hidden;margin:4px 0}
+.bw-bar-fill{height:100%;border-radius:6px;transition:width .8s ease}
+
+/* Tabs */
+.tabs{display:flex;border-bottom:1px solid var(--bdr);margin-bottom:16px;overflow-x:auto}
+.tab{padding:8px 16px;font-family:'JetBrains Mono',monospace;font-size:11px;letter-spacing:1px;text-transform:uppercase;
+  cursor:pointer;color:var(--tm);border-bottom:2px solid transparent;margin-bottom:-1px;transition:.2s;white-space:nowrap;
+  background:none;border-top:none;border-left:none;border-right:none}
+.tab:hover{color:var(--ts)}
+.tab.active{color:var(--acc);border-bottom-color:var(--acc)}
+.tp-panel{display:none}.tp-panel.active{display:block}
+
+.tool-section{display:none}.tool-section.active{display:block}
+.info-msg{color:var(--tm);font-family:'JetBrains Mono',monospace;font-size:12px;padding:20px;text-align:center}
+
+footer{text-align:center;margin-top:32px;font-family:'JetBrains Mono',monospace;font-size:10px;color:var(--tm);letter-spacing:1px}
+</style>
+</head>
+<body>
+<div class="app">
+
+<header>
+  <div class="hbadge">Network Toolkit — Advanced Tools</div>
+  <h1>Network Toolkit Pro</h1>
+  <p>Route Summarization &middot; VLSM &middot; DNS Lookup &middot; Bandwidth Calculator</p>
+</header>
+
+<!-- Tool Nav -->
+<div class="tool-nav">
+  <button class="tnav-btn active" onclick="setTool('route')">Route Summary</button>
+  <button class="tnav-btn" onclick="setTool('vlsm')">VLSM</button>
+  <button class="tnav-btn" onclick="setTool('dns')">DNS Lookup</button>
+  <button class="tnav-btn" onclick="setTool('bw')">Bandwidth</button>
+</div>
+
+<!-- ════════════════════════════════════════════
+     TOOL 1 — ROUTE SUMMARIZATION
+════════════════════════════════════════════ -->
+<div class="tool-section active" id="tool-route">
+  <div class="card">
+    <div class="ct">Route Summarization Input</div>
+    <div class="irow">
+      <div class="field" style="flex:2">
+        <span class="fl">Network List (one per line, CIDR notation)</span>
+        <textarea id="routeInput" placeholder="192.168.1.0/24&#10;192.168.2.0/24&#10;192.168.3.0/24&#10;192.168.4.0/24">192.168.1.0/24
+192.168.2.0/24
+192.168.3.0/24
+192.168.4.0/24</textarea>
+        <span class="fhint">Enter IPv4 networks in CIDR format, one per line</span>
+        <span class="ferr" id="routeErr">Invalid network detected</span>
+      </div>
+    </div>
+    <div class="irow">
+      <button class="run-btn" onclick="calcRoute()">Summarize</button>
+      <button class="clr-btn" onclick="document.getElementById('routeInput').value='';clearRouteResults()">Clear</button>
+    </div>
+  </div>
+
+  <div class="tabs" id="routeTabs">
+    <button class="tab active" onclick="showTab(this,'rt-results','routeTabs')">Summary Result</button>
+    <button class="tab" onclick="showTab(this,'rt-detail','routeTabs')">Network Detail</button>
+    <button class="tab" onclick="showTab(this,'rt-diagram','routeTabs')">Diagram</button>
+    <button class="tab" onclick="showTab(this,'rt-glossary','routeTabs')">Glossary</button>
+  </div>
+
+  <div class="tp-panel active card" id="tab-rt-results">
+    <div class="ct">Supernet Result</div>
+    <div id="routeResults"><p class="info-msg">Enter networks above and click Summarize</p></div>
+  </div>
+  <div class="tp-panel card" id="tab-rt-detail">
+    <div class="ct">Individual Network Analysis</div>
+    <div id="routeDetail"><p class="info-msg">Run summarization to see detail</p></div>
+  </div>
+  <div class="tp-panel card" id="tab-rt-diagram">
+    <div class="ct">Visual Supernet Diagram</div>
+    <canvas class="cvs" id="routeCanvas" height="320"></canvas>
+  </div>
+  <div class="tp-panel card" id="tab-rt-glossary">
+    <div class="ct">Terminology</div>
+    <div class="ggl" id="routeGlossary"></div>
+  </div>
+</div>
+
+<!-- ════════════════════════════════════════════
+     TOOL 2 — VLSM
+════════════════════════════════════════════ -->
+<div class="tool-section" id="tool-vlsm">
+  <div class="card">
+    <div class="ct">VLSM Configuration</div>
+    <div class="irow">
+      <div class="field" style="max-width:240px">
+        <span class="fl">Base Network (CIDR)</span>
+        <input type="text" id="vlsmBase" placeholder="e.g. 192.168.10.0/24" value="192.168.10.0/24">
+      </div>
+      <div class="field" style="flex:2">
+        <span class="fl">Subnets — Name : Required Hosts (one per line)</span>
+        <textarea id="vlsmSubnets" placeholder="HQ Office : 50&#10;Branch A : 25&#10;Branch B : 12&#10;Servers : 6&#10;Point-to-Point : 2">HQ Office : 50
+Branch A : 25
+Branch B : 12
+Servers : 6
+Point-to-Point : 2</textarea>
+        <span class="fhint">Format: Name : HostCount — subnets are allocated largest-first</span>
+        <span class="ferr" id="vlsmErr">Invalid input</span>
+      </div>
+    </div>
+    <div class="irow">
+      <button class="run-btn" onclick="calcVLSM()">Allocate Subnets</button>
+      <button class="clr-btn" onclick="clearVLSMResults()">Clear</button>
+    </div>
+  </div>
+
+  <div class="tabs" id="vlsmTabs">
+    <button class="tab active" onclick="showTab(this,'vl-table','vlsmTabs')">Allocation Table</button>
+    <button class="tab" onclick="showTab(this,'vl-diagram','vlsmTabs')">Address Space</button>
+    <button class="tab" onclick="showTab(this,'vl-glossary','vlsmTabs')">Glossary</button>
+  </div>
+
+  <div class="tp-panel active card" id="tab-vl-table">
+    <div class="ct">VLSM Allocation</div>
+    <div id="vlsmResults"><p class="info-msg">Configure base network and subnets above, then click Allocate</p></div>
+  </div>
+  <div class="tp-panel card" id="tab-vl-diagram">
+    <div class="ct">Address Space Visualization</div>
+    <canvas class="cvs" id="vlsmCanvas" height="340"></canvas>
+  </div>
+  <div class="tp-panel card" id="tab-vl-glossary">
+    <div class="ct">Terminology</div>
+    <div class="ggl" id="vlsmGlossary"></div>
+  </div>
+</div>
+
+<!-- ════════════════════════════════════════════
+     TOOL 3 — DNS LOOKUP
+════════════════════════════════════════════ -->
+<div class="tool-section" id="tool-dns">
+  <div class="card">
+    <div class="ct">DNS Query Configuration</div>
+    <div class="irow">
+      <div class="field" style="flex:2">
+        <span class="fl">Domain Name</span>
+        <input type="text" id="dnsHost" placeholder="e.g. google.com or mail.example.org" value="google.com">
+        <span class="fhint">Enter a fully qualified domain name (FQDN)</span>
+        <span class="ferr" id="dnsErr">Invalid domain name</span>
+      </div>
+      <div class="field" style="max-width:170px">
+        <span class="fl">Record Type</span>
+        <select id="dnsType">
+          <option value="A">A — IPv4 Address</option>
+          <option value="AAAA">AAAA — IPv6 Address</option>
+          <option value="MX">MX — Mail Exchange</option>
+          <option value="NS">NS — Name Server</option>
+          <option value="TXT">TXT — Text Record</option>
+          <option value="CNAME">CNAME — Alias</option>
+          <option value="PTR">PTR — Reverse DNS</option>
+          <option value="SOA">SOA — Start of Authority</option>
+        </select>
+      </div>
+      <div class="field" style="max-width:170px">
+        <span class="fl">Resolver</span>
+        <select id="dnsResolver">
+          <option value="8.8.8.8">8.8.8.8 (Google)</option>
+          <option value="1.1.1.1">1.1.1.1 (Cloudflare)</option>
+          <option value="9.9.9.9">9.9.9.9 (Quad9)</option>
+          <option value="208.67.222.222">208.67.222.222 (OpenDNS)</option>
+        </select>
+      </div>
+      <button class="run-btn" onclick="runDNS()">Lookup</button>
+    </div>
+  </div>
+
+  <div class="tabs" id="dnsTabs">
+    <button class="tab active" onclick="showTab(this,'dns-result','dnsTabs')">Query Result</button>
+    <button class="tab" onclick="showTab(this,'dns-chain','dnsTabs')">Resolution Chain</button>
+    <button class="tab" onclick="showTab(this,'dns-glossary','dnsTabs')">Glossary</button>
+  </div>
+
+  <div class="tp-panel active card" id="tab-dns-result">
+    <div class="ct">DNS Response</div>
+    <div id="dnsResults"><p class="info-msg">Enter a domain and click Lookup</p></div>
+  </div>
+  <div class="tp-panel card" id="tab-dns-chain">
+    <div class="ct">Recursive Resolution Chain</div>
+    <canvas class="cvs" id="dnsCanvas" height="460"></canvas>
+    <p style="font-family:'JetBrains Mono',monospace;font-size:10px;color:var(--tm);margin-top:8px;text-align:center">Simulated resolution path from root to authoritative nameserver</p>
+  </div>
+  <div class="tp-panel card" id="tab-dns-glossary">
+    <div class="ct">Terminology</div>
+    <div class="ggl" id="dnsGlossary"></div>
+  </div>
+</div>
+
+<!-- ════════════════════════════════════════════
+     TOOL 4 — BANDWIDTH CALCULATOR
+════════════════════════════════════════════ -->
+<div class="tool-section" id="tool-bw">
+  <div class="card">
+    <div class="ct">Bandwidth Calculator</div>
+    <div class="irow">
+      <div class="field">
+        <span class="fl">File / Transfer Size</span>
+        <input type="number" id="bwSize" min="0" value="1" step="any">
+      </div>
+      <div class="field" style="max-width:160px">
+        <span class="fl">Size Unit</span>
+        <select id="bwSizeUnit">
+          <option value="B">Bytes (B)</option>
+          <option value="KB">Kilobytes (KB)</option>
+          <option value="MB" selected>Megabytes (MB)</option>
+          <option value="GB">Gigabytes (GB)</option>
+          <option value="TB">Terabytes (TB)</option>
+          <option value="Kb">Kilobits (Kb)</option>
+          <option value="Mb">Megabits (Mb)</option>
+          <option value="Gb">Gigabits (Gb)</option>
+        </select>
+      </div>
+      <div class="field">
+        <span class="fl">Link Speed</span>
+        <input type="number" id="bwSpeed" min="0" value="100" step="any">
+      </div>
+      <div class="field" style="max-width:160px">
+        <span class="fl">Speed Unit</span>
+        <select id="bwSpeedUnit">
+          <option value="Kbps">Kbps</option>
+          <option value="Mbps" selected>Mbps</option>
+          <option value="Gbps">Gbps</option>
+          <option value="KBps">KB/s</option>
+          <option value="MBps">MB/s</option>
+          <option value="GBps">GB/s</option>
+        </select>
+      </div>
+      <div class="field" style="max-width:160px">
+        <span class="fl">Efficiency %</span>
+        <input type="number" id="bwEff" min="1" max="100" value="90">
+        <span class="fhint">Protocol overhead (typ. 85–95%)</span>
+      </div>
+    </div>
+    <div class="irow">
+      <button class="run-btn" onclick="calcBW()">Calculate</button>
+      <button class="clr-btn" onclick="clearBWResults()">Clear</button>
+    </div>
+  </div>
+
+  <div class="tabs" id="bwTabs">
+    <button class="tab active" onclick="showTab(this,'bw-result','bwTabs')">Transfer Times</button>
+    <button class="tab" onclick="showTab(this,'bw-convert','bwTabs')">Unit Converter</button>
+    <button class="tab" onclick="showTab(this,'bw-common','bwTabs')">Common Links</button>
+    <button class="tab" onclick="showTab(this,'bw-glossary','bwTabs')">Glossary</button>
+  </div>
+
+  <div class="tp-panel active card" id="tab-bw-result">
+    <div class="ct">Transfer Time Results</div>
+    <div id="bwResults"><p class="info-msg">Enter file size and link speed, then click Calculate</p></div>
+  </div>
+  <div class="tp-panel card" id="tab-bw-convert">
+    <div class="ct">Data Unit Converter</div>
+    <div id="bwConvert"><p class="info-msg">Run a calculation to populate conversions</p></div>
+  </div>
+  <div class="tp-panel card" id="tab-bw-common">
+    <div class="ct">Common Link Speeds — Transfer Time Comparison</div>
+    <div id="bwCommon"><p class="info-msg">Run a calculation to compare against common link speeds</p></div>
+  </div>
+  <div class="tp-panel card" id="tab-bw-glossary">
+    <div class="ct">Terminology</div>
+    <div class="ggl" id="bwGlossary"></div>
+  </div>
+</div>
+
+<footer>Network Toolkit Pro &middot; Route Summarization &middot; VLSM &middot; DNS &middot; Bandwidth</footer>
+</div>
+
+<script>
+// ══════════════════════════════════════════
+//  SHARED UTILITIES
+// ══════════════════════════════════════════
+const rnd=(a,b)=>Math.random()*(b-a)+a;
+const ipToNum=ip=>ip.split('.').reduce((a,o)=>(a<<8)|(+o)>>>0,0)>>>0;
+const numToIP=n=>[(n>>>24)&255,(n>>>16)&255,(n>>>8)&255,n&255].join('.');
+const cidrToMask=c=>{if(c===0)return 0;return(~0<<(32-c))>>>0};
+const validIP=ip=>{const p=ip.split('.');return p.length===4&&p.every(x=>x!==''&&!isNaN(x)&&+x>=0&&+x<=255)};
+
+function parseNetwork(s){
+  const t=s.trim();const parts=t.split('/');
+  if(parts.length!==2)return null;
+  const ip=parts[0].trim();const cidr=parseInt(parts[1]);
+  if(!validIP(ip)||isNaN(cidr)||cidr<0||cidr>32)return null;
+  const maskN=cidrToMask(cidr);
+  const netNum=(ipToNum(ip)&maskN)>>>0;
+  const bcast=(netNum|(~maskN>>>0))>>>0;
+  return{ip,cidr,netNum,bcast,maskN,size:Math.pow(2,32-cidr)};
+}
+
+function setTool(t){
+  document.querySelectorAll('.tool-section').forEach(s=>s.classList.remove('active'));
+  document.querySelectorAll('.tnav-btn').forEach(b=>b.classList.remove('active'));
+  document.getElementById('tool-'+t).classList.add('active');
+  event.target.classList.add('active');
+}
+
+function showTab(btn,id,tabsId){
+  const panelPrefix='tab-';
+  const parent=document.getElementById('tool-'+tabsId.replace('Tabs',''))||
+                document.getElementById(tabsId).closest('.tool-section');
+  document.querySelectorAll('#'+tabsId+' ~ .tp-panel, #'+tabsId+' ~ .card').forEach(p=>{
+    if(p.classList.contains('tp-panel'))p.classList.remove('active')});
+  document.querySelectorAll('#'+tabsId+' .tab').forEach(t=>t.classList.remove('active'));
+  document.getElementById(panelPrefix+id).classList.add('active');
+  btn.classList.add('active');
+}
+
+function roundRect(ctx,x,y,w,h,r){
+  ctx.beginPath();ctx.moveTo(x+r,y);ctx.lineTo(x+w-r,y);ctx.quadraticCurveTo(x+w,y,x+w,y+r);
+  ctx.lineTo(x+w,y+h-r);ctx.quadraticCurveTo(x+w,y+h,x+w-r,y+h);
+  ctx.lineTo(x+r,y+h);ctx.quadraticCurveTo(x,y+h,x,y+h-r);
+  ctx.lineTo(x,y+r);ctx.quadraticCurveTo(x,y,x+r,y);ctx.closePath();
+}
+
+// ══════════════════════════════════════════
+//  TOOL 1 — ROUTE SUMMARIZATION
+// ══════════════════════════════════════════
+let lastRouteData=null;
+
+function clearRouteResults(){lastRouteData=null;
+  document.getElementById('routeResults').innerHTML='<p class="info-msg">Enter networks above and click Summarize</p>';
+  document.getElementById('routeDetail').innerHTML='<p class="info-msg">Run summarization to see detail</p>';
+  const cv=document.getElementById('routeCanvas');cv.getContext('2d').clearRect(0,0,cv.width,cv.height);
+  document.getElementById('routeErr').style.display='none';}
+
+function calcRoute(){
+  const raw=document.getElementById('routeInput').value.trim();
+  const errEl=document.getElementById('routeErr');
+  const lines=raw.split('\n').map(l=>l.trim()).filter(l=>l.length>0);
+  if(lines.length===0){errEl.textContent='Please enter at least one network.';errEl.style.display='block';return}
+  const nets=[];
+  for(const l of lines){const n=parseNetwork(l);if(!n){errEl.textContent=`Invalid: "${l}"`;errEl.style.display='block';return}nets.push(n)}
+  errEl.style.display='none';
+  // Sort by network address
+  nets.sort((a,b)=>a.netNum-b.netNum);
+  // Find supernet: find the common prefix
+  let minNet=nets.reduce((a,b)=>a.netNum<b.netNum?a:b).netNum;
+  let maxBcast=nets.reduce((a,b)=>a.bcast>b.bcast?a:b).bcast;
+  // Find smallest CIDR that covers all
+  let superCidr=32;
+  for(let c=0;c<=32;c++){
+    const m=cidrToMask(c);
+    const sn=(minNet&m)>>>0;
+    if((maxBcast&m)>>>0===sn){superCidr=c;break}}
+  const superMask=cidrToMask(superCidr);
+  const superNet=(minNet&superMask)>>>0;
+  const superBcast=(superNet|(~superMask>>>0))>>>0;
+  const superHosts=Math.max(0,Math.pow(2,32-superCidr)-2);
+  const superSize=Math.pow(2,32-superCidr);
+  // Coverage
+  const inputTotal=nets.reduce((a,n)=>a+n.size,0);
+  const coverage=((inputTotal/superSize)*100).toFixed(1);
+  const waste=superSize-inputTotal;
+  const efficient=coverage>=50;
+
+  lastRouteData={nets,superNet,superBcast,superCidr,superMask,superHosts,superSize,inputTotal,coverage,waste,efficient};
+
+  // Results
+  document.getElementById('routeResults').innerHTML=`
+    <div class="rg">
+      <div class="rrow"><span class="rk">Supernet (Summary Route)</span><span class="rv">${numToIP(superNet)}/${superCidr}</span></div>
+      <div class="rrow"><span class="rk">Subnet Mask</span><span class="rv">${numToIP(superMask)}</span></div>
+      <div class="rrow"><span class="rk">Network Address</span><span class="rv">${numToIP(superNet)}</span></div>
+      <div class="rrow"><span class="rk">Broadcast Address</span><span class="rv">${numToIP(superBcast)}</span></div>
+      <div class="rrow"><span class="rk">Total Addresses</span><span class="rv">${superSize.toLocaleString()}</span></div>
+      <div class="rrow"><span class="rk">Usable Hosts</span><span class="rv">${superHosts.toLocaleString()}</span></div>
+      <div class="rrow"><span class="rk">Networks Summarized</span><span class="rv">${nets.length}</span></div>
+      <div class="rrow"><span class="rk">Coverage Efficiency</span><span class="rv">${coverage}% <span class="chip ${efficient?'ok':'warn'}">${efficient?'Efficient':'Loose'}</span></span></div>
+      <div class="rrow"><span class="rk">Wasted Addresses</span><span class="rv">${waste.toLocaleString()} ${waste===0?'<span class="chip ok">Perfect</span>':'<span class="chip warn">Fragmented</span>'}</span></div>
+    </div>`;
+
+  // Detail table
+  document.getElementById('routeDetail').innerHTML=`
+    <div style="overflow-x:auto"><table class="dtable">
+      <thead><tr><th>#</th><th>Network</th><th>Mask</th><th>Network Addr</th><th>Broadcast</th><th>Hosts</th><th>In Supernet?</th></tr></thead>
+      <tbody>${nets.map((n,i)=>{
+        const inSuper=n.netNum>=superNet&&n.bcast<=superBcast;
+        const h=Math.max(0,n.size-2);
+        return`<tr><td>${i+1}</td><td style="color:var(--accb)">${numToIP(n.netNum)}/${n.cidr}</td><td>${numToIP(n.maskN)}</td><td>${numToIP(n.netNum)}</td><td style="color:var(--warn)">${numToIP(n.bcast)}</td><td style="color:var(--ok)">${h.toLocaleString()}</td><td>${inSuper?'<span class="chip ok">Yes</span>':'<span class="chip err">No</span>'}</td></tr>`}).join('')}
+      </tbody></table></div>`;
+
+  drawRouteDiagram();
+}
+
+function drawRouteDiagram(){
+  const d=lastRouteData;if(!d)return;
+  const canvas=document.getElementById('routeCanvas');
+  canvas.width=canvas.offsetWidth||800;
+  const ctx=canvas.getContext('2d'),W=canvas.width,H=canvas.height;
+  ctx.clearRect(0,0,W,H);ctx.fillStyle='#0d1117';ctx.fillRect(0,0,W,H);
+  ctx.strokeStyle='rgba(46,168,224,.06)';ctx.lineWidth=1;
+  for(let x=0;x<W;x+=40){ctx.beginPath();ctx.moveTo(x,0);ctx.lineTo(x,H);ctx.stroke()}
+  for(let y=0;y<H;y+=40){ctx.beginPath();ctx.moveTo(0,y);ctx.lineTo(W,y);ctx.stroke()}
+  const mono="'JetBrains Mono',monospace",sans="'Rajdhani',sans-serif";
+  const pad=30,barH=36,gap=10;
+  const totalW=W-pad*2;
+  const superSize=d.superSize;
+  // Supernet bar
+  const sy=50;
+  ctx.fillStyle='rgba(46,168,224,.12)';ctx.strokeStyle='#2ea8e0';ctx.lineWidth=1.5;
+  roundRect(ctx,pad,sy,totalW,barH,5);ctx.fill();ctx.stroke();
+  ctx.fillStyle='#2ea8e0';ctx.font=`bold 12px ${sans}`;ctx.textAlign='center';
+  ctx.fillText(`SUPERNET: ${numToIP(d.superNet)}/${d.superCidr}  (${d.superSize.toLocaleString()} addresses)`,W/2,sy+barH/2+5);
+  // Individual nets
+  const netY=sy+barH+gap*2+18;
+  ctx.fillStyle='#8b949e';ctx.font=`10px ${mono}`;ctx.textAlign='center';
+  ctx.fillText('Individual networks within supernet address space:',W/2,netY-8);
+  const colors=['#58c8f4','#3fb950','#d29922','#d2a8ff','#ffa657','#79c0ff','#f85149','#a5d6ff'];
+  d.nets.forEach((n,i)=>{
+    const startRatio=(n.netNum-d.superNet)/superSize;
+    const widthRatio=n.size/superSize;
+    const x=pad+startRatio*totalW;const w=Math.max(2,widthRatio*totalW);
+    const col=colors[i%colors.length];
+    ctx.fillStyle=col.replace('#','rgba(').replace(/^rgba\(/,'rgba(')+'1)';
+    // Draw as hex color with opacity
+    ctx.globalAlpha=0.18;ctx.fillStyle=col;
+    roundRect(ctx,x,netY,w,barH,3);ctx.fill();
+    ctx.globalAlpha=1;ctx.strokeStyle=col;ctx.lineWidth=1.5;
+    roundRect(ctx,x,netY,w,barH,3);ctx.stroke();
+    // Label inside if wide enough
+    if(w>70){ctx.fillStyle=col;ctx.font=`9px ${mono}`;ctx.textAlign='center';
+      ctx.fillText(`/${n.cidr}`,x+w/2,netY+barH/2+4)}
+  });
+  // Legend
+  const legY=netY+barH+20;
+  let lx=pad;
+  d.nets.forEach((n,i)=>{
+    const col=colors[i%colors.length];
+    ctx.fillStyle=col;ctx.beginPath();ctx.arc(lx+5,legY,5,0,Math.PI*2);ctx.fill();
+    ctx.fillStyle='#8b949e';ctx.font=`10px ${mono}`;ctx.textAlign='left';
+    const label=`${numToIP(n.netNum)}/${n.cidr}`;
+    ctx.fillText(label,lx+14,legY+4);
+    lx+=ctx.measureText(label).width+28;
+    if(lx>W-100){lx=pad}
+  });
+  // Coverage bar
+  const covY=legY+30;
+  const covW=Math.round((d.inputTotal/d.superSize)*totalW);
+  ctx.fillStyle='rgba(255,255,255,.04)';ctx.fillRect(pad,covY,totalW,14);
+  ctx.fillStyle=d.efficient?'rgba(63,185,80,.5)':'rgba(210,153,34,.5)';ctx.fillRect(pad,covY,covW,14);
+  ctx.strokeStyle=d.efficient?'var(--ok)':'var(--warn)';ctx.lineWidth=1;ctx.strokeRect(pad,covY,totalW,14);
+  ctx.fillStyle='#8b949e';ctx.font=`9px ${mono}`;ctx.textAlign='left';
+  ctx.fillText(`Coverage: ${d.coverage}%`,pad+covW+4,covY+10);
+  ctx.textAlign='right';ctx.fillText(`Wasted: ${d.waste.toLocaleString()} addr`,W-pad,covY+10);
+}
+
+// ══════════════════════════════════════════
+//  TOOL 2 — VLSM
+// ══════════════════════════════════════════
+let lastVLSMData=null;
+
+function clearVLSMResults(){lastVLSMData=null;
+  document.getElementById('vlsmResults').innerHTML='<p class="info-msg">Configure base network and subnets above, then click Allocate</p>';
+  document.getElementById('vlsmErr').style.display='none';
+  const cv=document.getElementById('vlsmCanvas');cv.getContext('2d').clearRect(0,0,cv.width,cv.height);}
+
+function calcVLSM(){
+  const baseStr=document.getElementById('vlsmBase').value.trim();
+  const base=parseNetwork(baseStr);
+  const errEl=document.getElementById('vlsmErr');
+  if(!base){errEl.textContent='Invalid base network.';errEl.style.display='block';return}
+  const lines=document.getElementById('vlsmSubnets').value.trim().split('\n').map(l=>l.trim()).filter(l=>l);
+  if(lines.length===0){errEl.textContent='Enter at least one subnet requirement.';errEl.style.display='block';return}
+  const reqs=[];
+  for(const l of lines){
+    const parts=l.split(':');if(parts.length<2){errEl.textContent=`Invalid line: "${l}"`;errEl.style.display='block';return}
+    const name=parts[0].trim();const hosts=parseInt(parts[1].trim());
+    if(isNaN(hosts)||hosts<0){errEl.textContent=`Invalid host count: "${l}"`;errEl.style.display='block';return}
+    // Smallest prefix that fits hosts+2 (net+bcast)
+    let cidr=32;for(let c=30;c>=0;c--){if(Math.pow(2,32-c)-2>=hosts){cidr=c}else break}
+    const size=Math.pow(2,32-cidr);
+    reqs.push({name,hosts,cidr,size,usable:size-2});
+  }
+  errEl.style.display='none';
+  // Sort largest first
+  reqs.sort((a,b)=>b.size-a.size);
+  // Allocate
+  const results=[];let ptr=base.netNum;
+  const baseEnd=base.bcast;
+  for(const r of reqs){
+    // Align to subnet boundary
+    const aligned=Math.ceil(ptr/r.size)*r.size;
+    if(aligned+r.size-1>baseEnd){
+      results.push({...r,network:null,error:'Address space exhausted'});continue}
+    ptr=aligned;
+    const netNum=ptr>>>0;const bcast=(netNum+r.size-1)>>>0;
+    const first=netNum+1,last=bcast-1;
+    results.push({...r,netNum,bcast,first,last,network:numToIP(netNum)});
+    ptr+=r.size;
+  }
+  lastVLSMData={base,results};
+  // Table
+  document.getElementById('vlsmResults').innerHTML=`
+    <p style="font-family:'JetBrains Mono',monospace;font-size:11px;color:var(--ts);margin-bottom:12px;">
+      Base: <strong style="color:var(--acc)">${numToIP(base.netNum)}/${base.cidr}</strong> &nbsp;&middot;&nbsp;
+      Total: <strong style="color:var(--accb)">${base.size.toLocaleString()}</strong> addresses &nbsp;&middot;&nbsp;
+      Used: <strong style="color:var(--ok)">${results.filter(r=>r.network).reduce((a,r)=>a+r.size,0).toLocaleString()}</strong> &nbsp;&middot;&nbsp;
+      Free: <strong style="color:var(--warn)">${(base.size-results.filter(r=>r.network).reduce((a,r)=>a+r.size,0)).toLocaleString()}</strong>
+    </p>
+    <div style="overflow-x:auto"><table class="dtable">
+      <thead><tr><th>#</th><th>Name</th><th>Needed Hosts</th><th>Prefix</th><th>Network</th><th>Broadcast</th><th>First IP</th><th>Last IP</th><th>Usable</th><th>Status</th></tr></thead>
+      <tbody>${results.map((r,i)=>r.network?`
+        <tr>
+          <td>${i+1}</td>
+          <td style="color:var(--accb);font-weight:600">${r.name}</td>
+          <td>${r.hosts}</td>
+          <td style="color:var(--acc)">/${r.cidr}</td>
+          <td>${numToIP(r.netNum)}</td>
+          <td style="color:var(--warn)">${numToIP(r.bcast)}</td>
+          <td style="color:var(--ok)">${numToIP(r.first)}</td>
+          <td style="color:var(--ok)">${numToIP(r.last)}</td>
+          <td style="color:var(--ok)">${r.usable}</td>
+          <td><span class="chip ok">Allocated</span></td>
+        </tr>`:`
+        <tr>
+          <td>${i+1}</td>
+          <td style="color:var(--err)">${r.name}</td>
+          <td>${r.hosts}</td>
+          <td>/${r.cidr}</td>
+          <td colspan="5" style="color:var(--err)">${r.error}</td>
+          <td><span class="chip err">Failed</span></td>
+        </tr>`).join('')}
+      </tbody></table></div>`;
+  drawVLSMDiagram();
+}
+
+function drawVLSMDiagram(){
+  const d=lastVLSMData;if(!d)return;
+  const canvas=document.getElementById('vlsmCanvas');
+  canvas.width=canvas.offsetWidth||800;
+  const ctx=canvas.getContext('2d'),W=canvas.width,H=canvas.height;
+  ctx.clearRect(0,0,W,H);ctx.fillStyle='#0d1117';ctx.fillRect(0,0,W,H);
+  ctx.strokeStyle='rgba(46,168,224,.06)';ctx.lineWidth=1;
+  for(let x=0;x<W;x+=40){ctx.beginPath();ctx.moveTo(x,0);ctx.lineTo(x,H);ctx.stroke()}
+  for(let y=0;y<H;y+=40){ctx.beginPath();ctx.moveTo(0,y);ctx.lineTo(W,y);ctx.stroke()}
+  const mono="'JetBrains Mono',monospace",sans="'Rajdhani',sans-serif";
+  const pad=24,barH=30,gap=6;const totalW=W-pad*2;
+  const baseSize=d.base.size;
+  // Base bar
+  ctx.fillStyle='rgba(46,168,224,.08)';ctx.strokeStyle='#2ea8e0';ctx.lineWidth=1.5;
+  roundRect(ctx,pad,30,totalW,24,4);ctx.fill();ctx.stroke();
+  ctx.fillStyle='#2ea8e0';ctx.font=`bold 11px ${sans}`;ctx.textAlign='center';
+  ctx.fillText(`Base: ${numToIP(d.base.netNum)}/${d.base.cidr}  (${d.base.size.toLocaleString()} addresses)`,W/2,30+15);
+  const colors=['#58c8f4','#3fb950','#d29922','#d2a8ff','#ffa657','#79c0ff','#a5d6ff','#f85149'];
+  let y=70;
+  d.results.filter(r=>r.network).forEach((r,i)=>{
+    const startRatio=(r.netNum-d.base.netNum)/baseSize;
+    const widthRatio=r.size/baseSize;
+    const bx=pad+startRatio*totalW,bw=Math.max(2,widthRatio*totalW);
+    const col=colors[i%colors.length];
+    // Full-width background strip
+    ctx.fillStyle='rgba(255,255,255,.02)';ctx.fillRect(pad,y,totalW,barH);
+    // Colored subnet block
+    ctx.globalAlpha=0.2;ctx.fillStyle=col;roundRect(ctx,bx,y,bw,barH,3);ctx.fill();
+    ctx.globalAlpha=1;ctx.strokeStyle=col;ctx.lineWidth=1.5;roundRect(ctx,bx,y,bw,barH,3);ctx.stroke();
+    // Name label left
+    ctx.fillStyle=col;ctx.font=`bold 11px ${sans}`;ctx.textAlign='left';
+    ctx.fillText(r.name,pad+4,y+barH/2+4);
+    // Network right
+    ctx.fillStyle='#8b949e';ctx.font=`10px ${mono}`;ctx.textAlign='right';
+    ctx.fillText(`${numToIP(r.netNum)}/${r.cidr} · ${r.usable} hosts`,W-pad-4,y+barH/2+4);
+    y+=barH+gap;
+  });
+  // Remaining space
+  const usedAddr=d.results.filter(r=>r.network).reduce((a,r)=>a+r.size,0);
+  const free=baseSize-usedAddr;
+  if(free>0){
+    const startRatio=usedAddr/baseSize;const bw=Math.max(2,(free/baseSize)*totalW);
+    const bx=pad+startRatio*totalW;
+    ctx.fillStyle='rgba(72,79,88,.15)';roundRect(ctx,bx,y,bw,barH,3);ctx.fill();
+    ctx.strokeStyle='#30363d';ctx.lineWidth=1;roundRect(ctx,bx,y,bw,barH,3);ctx.stroke();
+    if(bw>50){ctx.fillStyle='#484f58';ctx.font=`10px ${mono}`;ctx.textAlign='center';ctx.fillText(`Free: ${free.toLocaleString()} addr`,bx+bw/2,y+barH/2+4)}
+  }
+}
+
+// ══════════════════════════════════════════
+//  TOOL 3 — DNS LOOKUP (Simulated)
+// ══════════════════════════════════════════
+const dnsDB={
+  'google.com':{
+    A:['142.250.80.46','142.250.80.78'],
+    AAAA:['2607:f8b0:4004:c09::64','2607:f8b0:4004:c09::71'],
+    MX:[{prio:10,val:'smtp.google.com'},{prio:20,val:'alt1.aspmx.l.google.com'}],
+    NS:['ns1.google.com','ns2.google.com','ns3.google.com','ns4.google.com'],
+    TXT:['v=spf1 include:_spf.google.com ~all','google-site-verification=TV9-DBe4R80X4v0M4U_bd_J9cpOJM0nikft0jAgjmsQ'],
+    SOA:{mname:'ns1.google.com',rname:'dns-admin.google.com',serial:421368432,refresh:900,retry:900,expire:1800,ttl:60},
+    TTL:300,
+  },
+  'cloudflare.com':{
+    A:['104.16.132.229','104.16.133.229'],
+    AAAA:['2606:4700::6810:84e5','2606:4700::6810:85e5'],
+    MX:[{prio:5,val:'isaac.mx.cloudflare.net'},{prio:20,val:'linda.mx.cloudflare.net'}],
+    NS:['ns3.cloudflare.com','ns4.cloudflare.com','ns5.cloudflare.com','ns6.cloudflare.com','ns7.cloudflare.com'],
+    TXT:['v=spf1 include:_spf.mx.cloudflare.net ~all'],
+    SOA:{mname:'ns3.cloudflare.com',rname:'dns.cloudflare.com',serial:2309251502,refresh:10000,retry:2400,expire:604800,ttl:300},
+    TTL:300,
+  },
+  '8.8.8.8':{PTR:['dns.google'],TTL:21600},
+  '1.1.1.1':{PTR:['one.one.one.one'],TTL:1500},
+  'default':{
+    A:['93.184.216.34'],AAAA:['2606:2800:220:1:248:1893:25c8:1946'],
+    MX:[{prio:10,val:'mail.example.com'}],
+    NS:['a.iana-servers.net','b.iana-servers.net'],
+    TXT:['v=spf1 -all'],
+    SOA:{mname:'a.iana-servers.net',rname:'noc.dns.icann.org',serial:2023091401,refresh:7200,retry:3600,expire:1209600,ttl:3600},
+    TTL:86400,
+  }
+};
+
+let lastDNSData=null;
+let dnsAnimFrame=null;
+
+function runDNS(){
+  const host=document.getElementById('dnsHost').value.trim().toLowerCase();
+  const type=document.getElementById('dnsType').value;
+  const resolver=document.getElementById('dnsResolver').value;
+  const errEl=document.getElementById('dnsErr');
+  if(!host){errEl.style.display='block';return}
+  errEl.style.display='none';
+  const rec=dnsDB[host]||dnsDB['default'];
+  const ttl=rec.TTL||300;
+  const latency=(10+Math.random()*30).toFixed(1);
+
+  // Build records
+  let records=[];
+  if(type==='A')records=(rec.A||[]).map(v=>({type:'A',name:host,ttl,value:v}));
+  else if(type==='AAAA')records=(rec.AAAA||[]).map(v=>({type:'AAAA',name:host,ttl,value:v}));
+  else if(type==='MX')records=(rec.MX||[]).map(m=>({type:'MX',name:host,ttl,value:`${m.prio} ${m.val}`}));
+  else if(type==='NS')records=(rec.NS||[]).map(v=>({type:'NS',name:host,ttl,value:v}));
+  else if(type==='TXT')records=(rec.TXT||[]).map(v=>({type:'TXT',name:host,ttl,value:`"${v}"`}));
+  else if(type==='CNAME')records=[{type:'CNAME',name:host,ttl,value:host+'.cdn.example.com.'}];
+  else if(type==='PTR')records=(rec.PTR||[`host.${host}`]).map(v=>({type:'PTR',name:host,ttl,value:v}));
+  else if(type==='SOA'){const s=rec.SOA||dnsDB['default'].SOA;records=[{type:'SOA',name:host,ttl,value:`${s.mname} ${s.rname} ${s.serial} ${s.refresh} ${s.retry} ${s.expire} ${s.ttl}`}]}
+
+  const status=records.length?'NOERROR':'NXDOMAIN';
+  lastDNSData={host,type,resolver,latency,records,ttl,status};
+
+  // Result display
+  document.getElementById('dnsResults').innerHTML=`
+    <div style="display:flex;gap:8px;flex-wrap:wrap;margin-bottom:14px">
+      <span class="chip info">Query: ${host} IN ${type}</span>
+      <span class="chip info">Resolver: ${resolver}</span>
+      <span class="chip ${status==='NOERROR'?'ok':'err'}">${status}</span>
+      <span class="chip info">Latency: ${latency}ms</span>
+      <span class="chip info">TTL: ${ttl}s</span>
+    </div>
+    ${records.length?`<div style="overflow-x:auto"><table class="dtable">
+      <thead><tr><th>Name</th><th>Type</th><th>TTL</th><th>Value</th></tr></thead>
+      <tbody>${records.map(r=>`<tr><td style="color:var(--ts)">${r.name}.</td><td><span class="chip info">${r.type}</span></td><td>${r.ttl}</td><td style="color:var(--accb);word-break:break-all">${r.value}</td></tr>`).join('')}</tbody>
+    </table></div>`:'<p style="color:var(--err);font-family:\'JetBrains Mono\',monospace;font-size:12px;">No records found (NXDOMAIN)</p>'}`;
+
+  drawDNSChain();
+}
+
+function drawDNSChain(){
+  const d=lastDNSData;if(!d)return;
+  const canvas=document.getElementById('dnsCanvas');
+  canvas.width=canvas.offsetWidth||800;
+  const ctx=canvas.getContext('2d'),W=canvas.width,H=canvas.height;
+  ctx.clearRect(0,0,W,H);ctx.fillStyle='#0d1117';ctx.fillRect(0,0,W,H);
+  ctx.strokeStyle='rgba(46,168,224,.06)';ctx.lineWidth=1;
+  for(let x=0;x<W;x+=40){ctx.beginPath();ctx.moveTo(x,0);ctx.lineTo(x,H);ctx.stroke()}
+  for(let y=0;y<H;y+=40){ctx.beginPath();ctx.moveTo(0,y);ctx.lineTo(W,y);ctx.stroke()}
+  const mono="'JetBrains Mono',monospace",sans="'Rajdhani',sans-serif";
+
+  // Resolution chain nodes
+  const tldParts=d.host.split('.');
+  const tld=tldParts[tldParts.length-1]||'com';
+  const sld=tldParts.length>=2?tldParts.slice(-2).join('.'):'example.com';
+
+  const steps=[
+    {label:'Your Device',sub:'DNS Stub Resolver',color:'#58c8f4',latency:0},
+    {label:d.resolver+' (Resolver)',sub:'Recursive Nameserver',color:'#2ea8e0',latency:+(d.latency/5).toFixed(1)},
+    {label:'Root Nameserver',sub:'. (Root Zone)',color:'#d2a8ff',latency:+(d.latency/4).toFixed(1)},
+    {label:'.'+tld+' TLD Server',sub:`${tld.toUpperCase()} Registry`,color:'#d29922',latency:+(d.latency/3).toFixed(1)},
+    {label:'Authoritative NS',sub:sld+' nameserver',color:'#3fb950',latency:+(d.latency).toFixed(1)},
+    {label:'Response',sub:`${d.records.length} record${d.records.length!==1?'s':''} · TTL ${lastDNSData.ttl}s`,color:'#58c8f4',latency:null},
+  ];
+
+  const nodeR=22,stepH=(H-60)/steps.length;
+  const cx=W/2;
+
+  steps.forEach((s,i)=>{
+    const y=40+i*stepH;
+    // Arrow down
+    if(i<steps.length-1){
+      const dir=i<steps.length-2?1:-1;
+      ctx.strokeStyle='rgba(46,168,224,.3)';ctx.lineWidth=1.5;ctx.setLineDash([4,4]);
+      ctx.beginPath();ctx.moveTo(cx,y+nodeR);ctx.lineTo(cx,y+stepH-nodeR);ctx.stroke();ctx.setLineDash([]);
+      // Arrowhead
+      ctx.fillStyle='rgba(46,168,224,.4)';ctx.beginPath();
+      ctx.moveTo(cx,y+stepH-nodeR);ctx.lineTo(cx-5,y+stepH-nodeR-8);ctx.lineTo(cx+5,y+stepH-nodeR-8);ctx.closePath();ctx.fill();
+      // Latency label on arrow
+      if(i>0&&s.latency!==null){
+        ctx.fillStyle='#484f58';ctx.font=`9px ${mono}`;ctx.textAlign='left';
+        ctx.fillText(`~${s.latency}ms`,cx+8,y+stepH/2+nodeR/2);}
+    }
+    // Node
+    ctx.fillStyle=s.color.replace(/^#/,'rgba(').replace(/^rgba\(/,'rgba(')+'08)';
+    // just do manual opacity:
+    ctx.globalAlpha=0.12;ctx.fillStyle=s.color;
+    ctx.beginPath();ctx.arc(cx,y,nodeR,0,Math.PI*2);ctx.fill();
+    ctx.globalAlpha=1;ctx.strokeStyle=s.color;ctx.lineWidth=2;
+    ctx.beginPath();ctx.arc(cx,y,nodeR,0,Math.PI*2);ctx.stroke();
+    // Icon letter
+    ctx.fillStyle=s.color;ctx.font=`bold 12px ${sans}`;ctx.textAlign='center';
+    ctx.fillText(String(i+1),cx,y+4);
+    // Label right
+    ctx.fillStyle=s.color;ctx.font=`bold 12px ${sans}`;ctx.textAlign='left';
+    ctx.fillText(s.label,cx+nodeR+12,y-3);
+    ctx.fillStyle='#8b949e';ctx.font=`10px ${mono}`;
+    ctx.fillText(s.sub,cx+nodeR+12,y+13);
+    // Query label left
+    if(i===0){ctx.fillStyle='#484f58';ctx.font=`10px ${mono}`;ctx.textAlign='right';ctx.fillText(`Query: ${d.host} ${d.type}`,cx-nodeR-8,y+4)}
+    if(i===steps.length-1&&d.records.length){
+      ctx.fillStyle='#3fb950';ctx.font=`10px ${mono}`;ctx.textAlign='right';
+      const val=d.records[0].value;ctx.fillText(val.length>30?val.slice(0,30)+'…':val,cx-nodeR-8,y+4)}
+  });
+
+  // Cache indicator
+  ctx.fillStyle='rgba(46,168,224,.08)';roundRect(ctx,W-140,H-50,130,36,5);ctx.fill();
+  ctx.strokeStyle='#2ea8e0';ctx.lineWidth=1;roundRect(ctx,W-140,H-50,130,36,5);ctx.stroke();
+  ctx.fillStyle='#2ea8e0';ctx.font=`bold 10px ${sans}`;ctx.textAlign='center';ctx.fillText('RESOLVER CACHE',W-75,H-36);
+  ctx.fillStyle='#3fb950';ctx.font=`9px ${mono}`;ctx.fillText(`TTL: ${d.ttl}s`,W-75,H-22);
+}
+
+// ══════════════════════════════════════════
+//  TOOL 4 — BANDWIDTH CALCULATOR
+// ══════════════════════════════════════════
+const toBits={'B':8,'KB':8e3,'MB':8e6,'GB':8e9,'TB':8e12,'Kb':1e3,'Mb':1e6,'Gb':1e9};
+const toBitsPS={'Kbps':1e3,'Mbps':1e6,'Gbps':1e9,'KBps':8e3,'MBps':8e6,'GBps':8e9};
+
+function fmtTime(secs){
+  if(secs<0.001)return(secs*1000).toFixed(3)+' ms';
+  if(secs<1)return(secs*1000).toFixed(1)+' ms';
+  if(secs<60)return secs.toFixed(2)+' sec';
+  if(secs<3600){const m=Math.floor(secs/60),s=Math.round(secs%60);return`${m}m ${s}s`}
+  if(secs<86400){const h=Math.floor(secs/3600),m=Math.round((secs%3600)/60);return`${h}h ${m}m`}
+  return(secs/86400).toFixed(2)+' days';
+}
+
+function fmtBytes(bytes){
+  if(bytes<1e3)return bytes.toFixed(0)+' B';
+  if(bytes<1e6)return(bytes/1e3).toFixed(2)+' KB';
+  if(bytes<1e9)return(bytes/1e6).toFixed(2)+' MB';
+  if(bytes<1e12)return(bytes/1e9).toFixed(2)+' GB';
+  return(bytes/1e12).toFixed(3)+' TB';
+}
+
+function fmtBits(bits){
+  if(bits<1e3)return bits.toFixed(0)+' bit/s';
+  if(bits<1e6)return(bits/1e3).toFixed(2)+' Kbps';
+  if(bits<1e9)return(bits/1e6).toFixed(2)+' Mbps';
+  return(bits/1e9).toFixed(2)+' Gbps';
+}
+
+let lastBWData=null;
+
+function clearBWResults(){lastBWData=null;
+  ['bwResults','bwConvert','bwCommon'].forEach(id=>document.getElementById(id).innerHTML=`<p class="info-msg">Run a calculation to populate this section</p>`);}
+
+function calcBW(){
+  const size=parseFloat(document.getElementById('bwSize').value);
+  const sizeUnit=document.getElementById('bwSizeUnit').value;
+  const speed=parseFloat(document.getElementById('bwSpeed').value);
+  const speedUnit=document.getElementById('bwSpeedUnit').value;
+  const eff=parseFloat(document.getElementById('bwEff').value)/100;
+  if(isNaN(size)||size<=0||isNaN(speed)||speed<=0){alert('Enter valid positive values.');return}
+  const totalBits=size*toBits[sizeUnit];
+  const bitsPerSec=speed*toBitsPS[speedUnit];
+  const effSpeed=bitsPerSec*eff;
+  const secs=totalBits/effSpeed;
+  const secsRaw=totalBits/bitsPerSec;
+  const bytes=totalBits/8;
+  lastBWData={totalBits,bitsPerSec,effSpeed,secs,secsRaw,bytes,size,sizeUnit,speed,speedUnit,eff};
+
+  // Results
+  document.getElementById('bwResults').innerHTML=`
+    <div class="rg">
+      <div class="rrow"><span class="rk">File / Transfer Size</span><span class="rv">${fmtBytes(bytes)} &nbsp;<span class="chip info">${(totalBits/1e6).toFixed(2)} Mb</span></span></div>
+      <div class="rrow"><span class="rk">Link Speed (Raw)</span><span class="rv">${fmtBits(bitsPerSec)}</span></div>
+      <div class="rrow"><span class="rk">Effective Throughput</span><span class="rv">${fmtBits(effSpeed)} &nbsp;<span class="chip warn">${(eff*100).toFixed(0)}% efficiency</span></span></div>
+      <div class="rrow"><span class="rk">Transfer Time (Theoretical)</span><span class="rv">${fmtTime(secsRaw)}</span></div>
+      <div class="rrow"><span class="rk">Transfer Time (Effective)</span><span class="rv" style="font-size:16px;color:var(--accb)">${fmtTime(secs)}</span></div>
+      <div class="rrow"><span class="rk">Transfer Rate (Effective)</span><span class="rv">${fmtBytes(effSpeed/8)}/s</span></div>
+    </div>`;
+
+  // Unit conversions
+  document.getElementById('bwConvert').innerHTML=`
+    <div class="rg">
+      <div class="rrow"><span class="rk">Bytes</span><span class="rv">${bytes.toLocaleString(undefined,{maximumFractionDigits:0})} B</span></div>
+      <div class="rrow"><span class="rk">Kilobytes</span><span class="rv">${(bytes/1024).toFixed(2)} KiB &nbsp; / &nbsp; ${(bytes/1e3).toFixed(2)} KB</span></div>
+      <div class="rrow"><span class="rk">Megabytes</span><span class="rv">${(bytes/1048576).toFixed(4)} MiB &nbsp; / &nbsp; ${(bytes/1e6).toFixed(4)} MB</span></div>
+      <div class="rrow"><span class="rk">Gigabytes</span><span class="rv">${(bytes/1073741824).toFixed(6)} GiB &nbsp; / &nbsp; ${(bytes/1e9).toFixed(6)} GB</span></div>
+      <div class="rrow"><span class="rk">Kilobits</span><span class="rv">${(totalBits/1e3).toFixed(2)} Kb</span></div>
+      <div class="rrow"><span class="rk">Megabits</span><span class="rv">${(totalBits/1e6).toFixed(4)} Mb</span></div>
+      <div class="rrow"><span class="rk">Gigabits</span><span class="rv">${(totalBits/1e9).toFixed(6)} Gb</span></div>
+    </div>`;
+
+  // Common links
+  const links=[
+    {name:'56K Modem',bps:56e3},
+    {name:'DSL 1 Mbps',bps:1e6},
+    {name:'DSL 10 Mbps',bps:10e6},
+    {name:'Cable 100 Mbps',bps:100e6},
+    {name:'Fiber 1 Gbps',bps:1e9},
+    {name:'10GbE LAN',bps:10e9},
+    {name:'100GbE Backbone',bps:100e9},
+    {name:'Wi-Fi 802.11n',bps:150e6},
+    {name:'Wi-Fi 802.11ac',bps:867e6},
+    {name:'Wi-Fi 6 (ax)',bps:2.4e9},
+    {name:'USB 3.0',bps:5e9},
+    {name:'Thunderbolt 4',bps:40e9},
+  ];
+  const maxSec=Math.max(...links.map(l=>totalBits/(l.bps*eff)));
+  document.getElementById('bwCommon').innerHTML=`
+    <p style="font-family:'JetBrains Mono',monospace;font-size:11px;color:var(--ts);margin-bottom:14px;">Transferring <strong style="color:var(--acc)">${fmtBytes(bytes)}</strong> over common link types:</p>
+    ${links.map(l=>{
+      const t=totalBits/(l.bps*eff);const pct=Math.max(1,Math.round((t/maxSec)*100));
+      const col=t<1?'var(--ok)':t<60?'var(--acc)':t<3600?'var(--warn)':'var(--err)';
+      return`<div style="margin-bottom:10px">
+        <div style="display:flex;justify-content:space-between;font-family:'JetBrains Mono',monospace;font-size:11px;margin-bottom:3px">
+          <span style="color:var(--ts)">${l.name}</span>
+          <span style="color:${col};font-weight:600">${fmtTime(t)}</span>
+        </div>
+        <div class="bw-bar-bg"><div class="bw-bar-fill" style="width:${pct}%;background:${col}"></div></div>
+      </div>`}).join('')}`;
+}
+
+// ══════════════════════════════════════════
+//  GLOSSARIES
+// ══════════════════════════════════════════
+const routeGlossary=[
+  ['Route Summarization','Combining multiple contiguous IP networks into a single, shorter prefix (supernet) to reduce the size of routing tables.'],
+  ['Supernet','A network with a prefix shorter than the classful default, covering multiple smaller networks. Also called an aggregate route.'],
+  ['Aggregate Route','The summary route advertised to upstream routers, replacing individual more-specific routes to reduce routing overhead.'],
+  ['CIDR Block','Classless Inter-Domain Routing: a block of IP addresses defined by a network address and prefix length (e.g. 192.168.0.0/22).'],
+  ['Longest Prefix Match','The router forwarding rule: the most specific (longest) matching route is chosen. Summarization relies on this behavior.'],
+  ['Coverage Efficiency','The percentage of the supernet address space actually used by the summarized networks. 100% means no waste.'],
+  ['Discontiguous Networks','Networks that cannot be summarized into a single prefix without also including unrelated address space between them.'],
+  ['Route Flap','Rapid changes in route availability. Summarization dampens flaps by hiding individual subnet changes from upstream routers.'],
+];
+document.getElementById('routeGlossary').innerHTML=routeGlossary.map(([t,d])=>`<div class="gi"><div class="gt">${t}</div><div class="gd">${d}</div></div>`).join('');
+
+const vlsmGlossary=[
+  ['VLSM','Variable Length Subnet Masking — using different subnet masks within the same major network to allocate address space of varying sizes.'],
+  ['Fixed-Length Subnet Masking','The traditional approach where all subnets in a network use identical prefix lengths, wasting addresses in small subnets.'],
+  ['Address Space Efficiency','How much of the allocated IP space is actually assigned to hosts. VLSM maximizes this by fitting subnets precisely.'],
+  ['Prefix Length','The number of bits in the network portion of an address. A longer prefix (/28) means a smaller subnet; shorter (/22) means larger.'],
+  ['Subnet Boundary Alignment','Each subnet must start at an address that is a multiple of its size. VLSM allocations respect this rule automatically.'],
+  ['Largest-First Allocation','Best practice: allocate the largest required subnets first to avoid fragmentation and simplify boundary alignment.'],
+  ['Address Exhaustion','When no contiguous block large enough to satisfy a subnet requirement remains in the base network.'],
+  ['Classless Routing','Modern routing protocols (OSPF, EIGRP, BGP) carry the prefix length with each route, enabling VLSM to function correctly.'],
+];
+document.getElementById('vlsmGlossary').innerHTML=vlsmGlossary.map(([t,d])=>`<div class="gi"><div class="gt">${t}</div><div class="gd">${d}</div></div>`).join('');
+
+const dnsGlossary=[
+  ['DNS','Domain Name System — the distributed, hierarchical database that maps human-readable hostnames to IP addresses.'],
+  ['A Record','Maps a hostname to an IPv4 address. The most common DNS record type.'],
+  ['AAAA Record','Maps a hostname to an IPv6 address (128-bit). The quad-A record is the IPv6 equivalent of the A record.'],
+  ['MX Record','Mail Exchange — specifies the mail server(s) responsible for receiving email for a domain, with priority values.'],
+  ['NS Record','Name Server — identifies the authoritative DNS servers for a domain.'],
+  ['TXT Record','Stores arbitrary text data. Used for SPF email authentication, domain ownership verification, and DKIM keys.'],
+  ['CNAME Record','Canonical Name — an alias that points one hostname to another (the canonical name). Resolved recursively.'],
+  ['SOA Record','Start of Authority — contains administrative information about a zone: primary NS, admin email, serial number, and timers.'],
+  ['PTR Record','Pointer record — used for reverse DNS lookups, mapping an IP address back to a hostname.'],
+  ['Recursive Resolver','A DNS server (like 8.8.8.8) that queries root, TLD, and authoritative servers on your behalf and caches the result.'],
+  ['Authoritative Nameserver','The definitive source for a domain\'s DNS records. Returns answers without querying further servers.'],
+  ['TTL','Time To Live — how long (in seconds) a resolver may cache a DNS response before querying again.'],
+];
+document.getElementById('dnsGlossary').innerHTML=dnsGlossary.map(([t,d])=>`<div class="gi"><div class="gt">${t}</div><div class="gd">${d}</div></div>`).join('');
+
+const bwGlossary=[
+  ['Bandwidth','The maximum data transfer rate of a network link, measured in bits per second (bps). Distinct from throughput.'],
+  ['Throughput','The actual data successfully transferred per second, always lower than bandwidth due to overhead and errors.'],
+  ['Latency','The delay for a packet to travel from source to destination. Does not affect raw bandwidth but impacts transfer time perception.'],
+  ['Goodput','The application-level throughput: data successfully delivered to the application, excluding retransmissions and protocol overhead.'],
+  ['Protocol Overhead','Bytes consumed by headers, acknowledgements, and framing that reduce usable throughput. TCP/IP typically adds 5–15%.'],
+  ['Bits vs Bytes','1 Byte = 8 bits. ISPs advertise in Mbps (megabits); files are measured in MB (megabytes). Always divide by 8 to convert.'],
+  ['SI vs Binary Prefixes','SI (kilo=1,000, mega=1,000,000) vs. binary (kibi=1,024, mebi=1,048,576). Storage uses both; networking uses SI exclusively.'],
+  ['Full-Duplex','A link that can transmit and receive simultaneously. Ethernet and fiber links are full-duplex; advertised speed is per direction.'],
+  ['Half-Duplex','A link that can only transmit or receive at a time (not simultaneously). Older Wi-Fi and shared coaxial networks.'],
+  ['QoS','Quality of Service — traffic prioritization to guarantee bandwidth and latency for critical applications like VoIP and video.'],
+  ['Saturation','When offered load exceeds link capacity. Results in queuing, increased latency, and eventual packet drops.'],
+  ['Transfer Time Formula','Time = File Size (bits) ÷ Throughput (bps). Divide file size by 8 if in bytes; apply efficiency factor for realistic estimates.'],
+];
+document.getElementById('bwGlossary').innerHTML=bwGlossary.map(([t,d])=>`<div class="gi"><div class="gt">${t}</div><div class="gd">${d}</div></div>`).join('');
+
+// ══════════════════════════════════════════
+//  RESIZE
+// ══════════════════════════════════════════
+window.addEventListener('resize',()=>{
+  if(lastRouteData)drawRouteDiagram();
+  if(lastVLSMData)drawVLSMDiagram();
+  if(lastDNSData)drawDNSChain();
+});
+</script>
+</body>
+</html>

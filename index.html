@@ -1,0 +1,433 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Network Toolkit — Command Center</title>
+<link href="https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@300;400;500;600;700&family=Rajdhani:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+<style>
+:root{
+  --bg:#0d1117;--bg2:#161b22;--bg3:#1c2230;--bgi:#0a0e14;
+  --bdr:#30363d;--bdra:#1e6fa8;--acc:#2ea8e0;--accg:rgba(46,168,224,.15);
+  --accb:#58c8f4;--tp:#e6edf3;--ts:#8b949e;--tm:#484f58;
+  --ok:#3fb950;--warn:#d29922;--err:#f85149;
+  --gl:rgba(46,168,224,.05);
+  --t1:#58c8f4;--t2:#3fb950;--t3:#d2a8ff;--t4:#ffa657;
+}
+*{box-sizing:border-box;margin:0;padding:0}
+html,body{height:100%}
+body{background:var(--bg);color:var(--tp);font-family:'Rajdhani',sans-serif;font-size:15px;min-height:100vh;overflow-x:hidden;
+  background-image:linear-gradient(var(--gl) 1px,transparent 1px),linear-gradient(90deg,var(--gl) 1px,transparent 1px);
+  background-size:40px 40px}
+
+/* Scanline overlay */
+body::after{content:'';position:fixed;top:0;left:0;right:0;bottom:0;
+  background:repeating-linear-gradient(0deg,transparent,transparent 2px,rgba(0,0,0,.03) 2px,rgba(0,0,0,.03) 4px);
+  pointer-events:none;z-index:0}
+
+.app{max-width:1060px;margin:0 auto;padding:36px 20px 60px;position:relative;z-index:1}
+
+/* ── Header ── */
+.hero{text-align:center;margin-bottom:48px;position:relative}
+.hero-badge{display:inline-block;font-family:'JetBrains Mono',monospace;font-size:10px;letter-spacing:4px;color:var(--acc);
+  background:var(--accg);border:1px solid var(--bdra);border-radius:2px;padding:4px 14px;margin-bottom:14px;text-transform:uppercase}
+.hero h1{font-size:52px;font-weight:700;letter-spacing:3px;text-transform:uppercase;line-height:1;
+  background:linear-gradient(135deg,#fff 0%,var(--accb) 40%,var(--acc) 100%);
+  -webkit-background-clip:text;-webkit-text-fill-color:transparent;background-clip:text}
+.hero-sub{font-family:'JetBrains Mono',monospace;font-size:12px;color:var(--ts);letter-spacing:2px;margin-top:10px}
+.hero-divider{width:120px;height:1px;background:linear-gradient(90deg,transparent,var(--acc),transparent);margin:20px auto 0}
+
+/* Animated corner brackets */
+.hero-frame{position:relative;display:inline-block;padding:18px 32px}
+.hero-frame::before,.hero-frame::after{content:'';position:absolute;width:18px;height:18px;border-color:var(--acc);border-style:solid;opacity:.5}
+.hero-frame::before{top:0;left:0;border-width:2px 0 0 2px}
+.hero-frame::after{bottom:0;right:0;border-width:0 2px 2px 0}
+
+/* ── Status bar ── */
+.status-bar{display:flex;gap:8px;justify-content:center;flex-wrap:wrap;margin-bottom:42px}
+.sb-chip{font-family:'JetBrains Mono',monospace;font-size:10px;letter-spacing:1px;padding:5px 14px;
+  border-radius:3px;background:var(--bg3);border:1px solid var(--bdr);color:var(--ts);display:flex;align-items:center;gap:7px}
+.sb-dot{width:7px;height:7px;border-radius:50%;flex-shrink:0}
+@keyframes pulse{0%,100%{opacity:1}50%{opacity:.3}}
+.sb-dot.live{background:var(--ok);animation:pulse 2s infinite}
+.sb-dot.idle{background:var(--tm)}
+.sb-val{color:var(--accb);font-weight:600}
+
+/* ── Tool grid ── */
+.tool-grid{display:grid;grid-template-columns:repeat(2,1fr);gap:18px;margin-bottom:36px}
+@media(max-width:680px){.tool-grid{grid-template-columns:1fr}}
+
+/* Tool card */
+.tool-card{background:var(--bg3);border:1px solid var(--bdr);border-radius:10px;padding:0;
+  cursor:pointer;transition:transform .2s,border-color .2s,box-shadow .2s;overflow:hidden;
+  display:flex;flex-direction:column;position:relative;text-decoration:none;color:inherit}
+.tool-card:hover{transform:translateY(-4px);box-shadow:0 12px 40px rgba(0,0,0,.4)}
+.tool-card:hover .card-arrow{opacity:1;transform:translateX(0)}
+.tool-card:hover .card-glow{opacity:1}
+
+.card-glow{position:absolute;top:0;left:0;right:0;bottom:0;border-radius:10px;opacity:0;transition:opacity .3s;pointer-events:none}
+.tool-card:nth-child(1) .card-glow{box-shadow:0 0 30px rgba(88,200,244,.08) inset}
+.tool-card:nth-child(1):hover{border-color:var(--t1)}
+.tool-card:nth-child(2) .card-glow{box-shadow:0 0 30px rgba(63,185,80,.08) inset}
+.tool-card:nth-child(2):hover{border-color:var(--t2)}
+.tool-card:nth-child(3) .card-glow{box-shadow:0 0 30px rgba(210,168,255,.08) inset}
+.tool-card:nth-child(3):hover{border-color:var(--t3)}
+.tool-card:nth-child(4) .card-glow{box-shadow:0 0 30px rgba(255,166,87,.08) inset}
+.tool-card:nth-child(4):hover{border-color:var(--t4)}
+
+/* Card accent stripe */
+.card-stripe{height:3px;width:100%;background:linear-gradient(90deg,transparent,var(--stripe-col),transparent);opacity:.7}
+
+/* Card body */
+.card-body{padding:24px;flex:1;display:flex;flex-direction:column;gap:14px}
+.card-header{display:flex;align-items:flex-start;justify-content:space-between;gap:12px}
+.card-icon{width:48px;height:48px;border-radius:8px;display:flex;align-items:center;justify-content:center;flex-shrink:0;font-size:22px;border:1px solid rgba(255,255,255,.08)}
+.card-title-block{}
+.card-number{font-family:'JetBrains Mono',monospace;font-size:10px;letter-spacing:2px;color:var(--tm);text-transform:uppercase;margin-bottom:3px}
+.card-name{font-size:20px;font-weight:700;letter-spacing:1px;text-transform:uppercase;line-height:1.1}
+.card-arrow{font-size:18px;color:var(--ts);opacity:0;transform:translateX(-6px);transition:.2s;align-self:flex-start;margin-top:4px}
+
+.card-desc{font-size:13px;color:var(--ts);line-height:1.6}
+
+/* Feature tags */
+.card-features{display:flex;flex-wrap:wrap;gap:5px}
+.feat-tag{font-family:'JetBrains Mono',monospace;font-size:9px;letter-spacing:.5px;padding:3px 8px;
+  border-radius:3px;background:rgba(255,255,255,.04);border:1px solid var(--bdr);color:var(--tm);text-transform:uppercase}
+
+/* Card footer */
+.card-footer{padding:12px 24px;border-top:1px solid var(--bdr);display:flex;align-items:center;justify-content:space-between}
+.card-launch{font-family:'JetBrains Mono',monospace;font-size:10px;letter-spacing:1.5px;text-transform:uppercase;color:var(--ts);transition:color .2s}
+.tool-card:hover .card-launch{color:var(--acc)}
+.card-version{font-family:'JetBrains Mono',monospace;font-size:9px;color:var(--tm)}
+
+/* ── Quick stats ── */
+.stats-row{display:grid;grid-template-columns:repeat(4,1fr);gap:12px;margin-bottom:36px}
+@media(max-width:680px){.stats-row{grid-template-columns:repeat(2,1fr)}}
+.stat-card{background:var(--bg3);border:1px solid var(--bdr);border-radius:8px;padding:16px 18px;text-align:center}
+.stat-num{font-family:'JetBrains Mono',monospace;font-size:28px;font-weight:700;color:var(--accb);line-height:1}
+.stat-lbl{font-family:'JetBrains Mono',monospace;font-size:9px;letter-spacing:1.5px;text-transform:uppercase;color:var(--tm);margin-top:4px}
+
+/* ── Recent / Info row ── */
+.bottom-row{display:grid;grid-template-columns:1fr 1fr;gap:18px}
+@media(max-width:680px){.bottom-row{grid-template-columns:1fr}}
+
+.info-card{background:var(--bg3);border:1px solid var(--bdr);border-radius:8px;padding:20px;position:relative;overflow:hidden}
+.info-card::before{content:'';position:absolute;top:0;left:0;right:0;height:2px;background:linear-gradient(90deg,transparent,var(--acc),transparent);opacity:.5}
+.info-title{font-family:'JetBrains Mono',monospace;font-size:10px;letter-spacing:2px;text-transform:uppercase;color:var(--acc);margin-bottom:14px;display:flex;align-items:center;gap:8px}
+.info-title::after{content:'';flex:1;height:1px;background:linear-gradient(90deg,var(--bdra),transparent);opacity:.3}
+
+/* Quick reference */
+.ref-list{display:flex;flex-direction:column;gap:6px}
+.ref-item{display:flex;justify-content:space-between;align-items:center;padding:6px 10px;background:var(--bgi);border-radius:4px;border:1px solid rgba(48,54,61,.5)}
+.ref-label{font-family:'JetBrains Mono',monospace;font-size:10px;color:var(--ts)}
+.ref-val{font-family:'JetBrains Mono',monospace;font-size:10px;color:var(--accb);font-weight:600}
+
+/* Tips list */
+.tip-list{display:flex;flex-direction:column;gap:8px}
+.tip-item{display:flex;gap:10px;align-items:flex-start;padding:8px 10px;background:var(--bgi);border-radius:4px;border:1px solid rgba(48,54,61,.5);transition:border-color .2s}
+.tip-item:hover{border-color:var(--bdra)}
+.tip-num{font-family:'JetBrains Mono',monospace;font-size:10px;color:var(--acc);min-width:18px;font-weight:700;margin-top:1px}
+.tip-text{font-size:12px;color:var(--ts);line-height:1.5}
+
+/* ── Canvas decorations ── */
+#bgCanvas{position:fixed;top:0;left:0;width:100%;height:100%;z-index:0;pointer-events:none;opacity:.35}
+
+/* ── Footer ── */
+footer{text-align:center;margin-top:40px;font-family:'JetBrains Mono',monospace;font-size:10px;color:var(--tm);letter-spacing:1px;line-height:2}
+.footer-links{display:flex;justify-content:center;gap:20px;margin-top:8px;flex-wrap:wrap}
+.footer-link{font-family:'JetBrains Mono',monospace;font-size:10px;color:var(--ts);cursor:pointer;letter-spacing:1px;
+  text-decoration:none;border-bottom:1px solid transparent;transition:.2s;text-transform:uppercase;padding-bottom:1px}
+.footer-link:hover{color:var(--acc);border-bottom-color:var(--acc)}
+
+/* Glow ring animation on hover */
+@keyframes ringPulse{0%{box-shadow:0 0 0 0 rgba(46,168,224,.3)}70%{box-shadow:0 0 0 8px rgba(46,168,224,0)}100%{box-shadow:0 0 0 0 rgba(46,168,224,0)}}
+.launch-ring:active{animation:ringPulse .4s ease}
+</style>
+</head>
+<body>
+
+<!-- Particle canvas -->
+<canvas id="bgCanvas"></canvas>
+
+<div class="app">
+
+  <!-- Hero -->
+  <div class="hero">
+    <div class="hero-badge">&#x2316; Command Center</div>
+    <div class="hero-frame">
+      <h1>Network<br>Toolkit</h1>
+    </div>
+    <div class="hero-sub">IPv4 &nbsp;&middot;&nbsp; IPv6 &nbsp;&middot;&nbsp; Diagnostics &nbsp;&middot;&nbsp; Analysis &nbsp;&middot;&nbsp; Planning</div>
+    <div class="hero-divider"></div>
+  </div>
+
+  <!-- Status bar -->
+  <div class="status-bar">
+    <div class="sb-chip"><div class="sb-dot live"></div>Toolkit Status <span class="sb-val">Online</span></div>
+    <div class="sb-chip"><div class="sb-dot live"></div>Tools Available <span class="sb-val">6</span></div>
+    <div class="sb-chip"><div class="sb-dot idle"></div>Session <span class="sb-val" id="sessionTime">00:00</span></div>
+    <div class="sb-chip"><div class="sb-dot idle"></div>Local Time <span class="sb-val" id="localTime">—</span></div>
+    <div class="sb-chip"><div class="sb-dot idle"></div>Version <span class="sb-val">2.0</span></div>
+  </div>
+
+  <!-- Stats row -->
+  <div class="stats-row">
+    <div class="stat-card">
+      <div class="stat-num" style="color:var(--t1)">4B+</div>
+      <div class="stat-lbl">IPv4 Addresses</div>
+    </div>
+    <div class="stat-card">
+      <div class="stat-num" style="color:var(--t2)">340U+</div>
+      <div class="stat-lbl">IPv6 Addresses</div>
+    </div>
+    <div class="stat-card">
+      <div class="stat-num" style="color:var(--t3)">5</div>
+      <div class="stat-lbl">DNS Record Types</div>
+    </div>
+    <div class="stat-card">
+      <div class="stat-num" style="color:var(--t4)">12</div>
+      <div class="stat-lbl">Link Speed Profiles</div>
+    </div>
+  </div>
+
+  <!-- Tool grid -->
+  <div class="tool-grid">
+
+    <!-- Card 1: IP Calculator -->
+    <a class="tool-card launch-ring" href="ip-calculator-v2.html" target="_blank">
+      <div class="card-glow"></div>
+      <div class="card-stripe" style="--stripe-col:var(--t1)"></div>
+      <div class="card-body">
+        <div class="card-header">
+          <div class="card-icon" style="background:rgba(88,200,244,.08);border-color:rgba(88,200,244,.2)">
+            <span style="color:var(--t1)">&#x2600;</span>
+          </div>
+          <div class="card-title-block">
+            <div class="card-number">Tool 01</div>
+            <div class="card-name" style="color:var(--t1)">IP Calculator Pro</div>
+          </div>
+          <div class="card-arrow" style="color:var(--t1)">&#x2192;</div>
+        </div>
+        <div class="card-desc">Full IPv4 and IPv6 subnet analysis. Enter an address and prefix to instantly compute network, broadcast, host range, wildcard, binary representation, and class information.</div>
+        <div class="card-features">
+          <span class="feat-tag">IPv4 Analysis</span>
+          <span class="feat-tag">IPv6 Mode</span>
+          <span class="feat-tag">Subnet Splitter</span>
+          <span class="feat-tag">Binary View</span>
+          <span class="feat-tag">Network Diagram</span>
+          <span class="feat-tag">PDF Export</span>
+        </div>
+      </div>
+      <div class="card-footer">
+        <span class="card-launch">&#x25B6; Launch Tool</span>
+        <span class="card-version">v2.0 &nbsp;&middot;&nbsp; ip-calculator-v2.html</span>
+      </div>
+    </a>
+
+    <!-- Card 2: Ping & Traceroute -->
+    <a class="tool-card launch-ring" href="ping-traceroute-visualizer.html" target="_blank">
+      <div class="card-glow"></div>
+      <div class="card-stripe" style="--stripe-col:var(--t2)"></div>
+      <div class="card-body">
+        <div class="card-header">
+          <div class="card-icon" style="background:rgba(63,185,80,.08);border-color:rgba(63,185,80,.2)">
+            <span style="color:var(--t2)">&#x2248;</span>
+          </div>
+          <div class="card-title-block">
+            <div class="card-number">Tool 02</div>
+            <div class="card-name" style="color:var(--t2)">Ping &amp; Traceroute</div>
+          </div>
+          <div class="card-arrow" style="color:var(--t2)">&#x2192;</div>
+        </div>
+        <div class="card-desc">Simulated real-time network diagnostics. Visualize ping responses with live timeline bars, RTT line charts, jitter analysis, and traceroute hop-by-hop path mapping.</div>
+        <div class="card-features">
+          <span class="feat-tag">Live Ping</span>
+          <span class="feat-tag">RTT Chart</span>
+          <span class="feat-tag">Jitter Analysis</span>
+          <span class="feat-tag">Traceroute</span>
+          <span class="feat-tag">Hop Diagram</span>
+          <span class="feat-tag">Ping Log</span>
+        </div>
+      </div>
+      <div class="card-footer">
+        <span class="card-launch">&#x25B6; Launch Tool</span>
+        <span class="card-version">v1.0 &nbsp;&middot;&nbsp; ping-traceroute-visualizer.html</span>
+      </div>
+    </a>
+
+    <!-- Card 3: Route & VLSM -->
+    <a class="tool-card launch-ring" href="network-toolkit-advanced.html" target="_blank">
+      <div class="card-glow"></div>
+      <div class="card-stripe" style="--stripe-col:var(--t3)"></div>
+      <div class="card-body">
+        <div class="card-header">
+          <div class="card-icon" style="background:rgba(210,168,255,.08);border-color:rgba(210,168,255,.2)">
+            <span style="color:var(--t3)">&#x2295;</span>
+          </div>
+          <div class="card-title-block">
+            <div class="card-number">Tool 03</div>
+            <div class="card-name" style="color:var(--t3)">Advanced Toolkit</div>
+          </div>
+          <div class="card-arrow" style="color:var(--t3)">&#x2192;</div>
+        </div>
+        <div class="card-desc">Four advanced network planning tools in one: Route Summarization finds the optimal supernet, VLSM allocates address space by requirement, DNS Lookup visualizes the resolution chain, and Bandwidth Calculator estimates transfer times.</div>
+        <div class="card-features">
+          <span class="feat-tag">Route Summary</span>
+          <span class="feat-tag">VLSM</span>
+          <span class="feat-tag">DNS Lookup</span>
+          <span class="feat-tag">Bandwidth Calc</span>
+          <span class="feat-tag">Unit Converter</span>
+          <span class="feat-tag">Link Comparison</span>
+        </div>
+      </div>
+      <div class="card-footer">
+        <span class="card-launch">&#x25B6; Launch Tool</span>
+        <span class="card-version">v1.0 &nbsp;&middot;&nbsp; network-toolkit-advanced.html</span>
+      </div>
+    </a>
+
+    <!-- Card 4: Coming Soon -->
+    <div class="tool-card" style="cursor:default;opacity:.6">
+      <div class="card-stripe" style="--stripe-col:var(--t4)"></div>
+      <div class="card-body">
+        <div class="card-header">
+          <div class="card-icon" style="background:rgba(255,166,87,.08);border-color:rgba(255,166,87,.2)">
+            <span style="color:var(--t4)">&#x25C6;</span>
+          </div>
+          <div class="card-title-block">
+            <div class="card-number">Tool 04</div>
+            <div class="card-name" style="color:var(--t4)">Coming Soon</div>
+          </div>
+        </div>
+        <div class="card-desc">The next addition to the suite. Candidates include a Protocol Analyzer (Ethernet frame &amp; TCP segment breakdown), Wi-Fi Channel Planner, NAT/PAT Visualizer, or a Network Security Toolkit.</div>
+        <div class="card-features">
+          <span class="feat-tag">Protocol Analyzer</span>
+          <span class="feat-tag">Wi-Fi Planner</span>
+          <span class="feat-tag">NAT Visualizer</span>
+          <span class="feat-tag">Security Tools</span>
+        </div>
+      </div>
+      <div class="card-footer">
+        <span class="card-launch" style="color:var(--tm)">&#x25CB; In Development</span>
+        <span class="card-version">v?.? &nbsp;&middot;&nbsp; TBD</span>
+      </div>
+    </div>
+
+  </div>
+
+  <!-- Bottom info row -->
+  <div class="bottom-row">
+
+    <!-- Quick Reference -->
+    <div class="info-card">
+      <div class="info-title">Quick Reference</div>
+      <div class="ref-list">
+        <div class="ref-item"><span class="ref-label">Private Class A</span><span class="ref-val">10.0.0.0/8</span></div>
+        <div class="ref-item"><span class="ref-label">Private Class B</span><span class="ref-val">172.16.0.0/12</span></div>
+        <div class="ref-item"><span class="ref-label">Private Class C</span><span class="ref-val">192.168.0.0/16</span></div>
+        <div class="ref-item"><span class="ref-label">Loopback</span><span class="ref-val">127.0.0.0/8</span></div>
+        <div class="ref-item"><span class="ref-label">Link-Local (v4)</span><span class="ref-val">169.254.0.0/16</span></div>
+        <div class="ref-item"><span class="ref-label">Link-Local (v6)</span><span class="ref-val">fe80::/10</span></div>
+        <div class="ref-item"><span class="ref-label">Multicast (v4)</span><span class="ref-val">224.0.0.0/4</span></div>
+        <div class="ref-item"><span class="ref-label">Default Route</span><span class="ref-val">0.0.0.0/0</span></div>
+        <div class="ref-item"><span class="ref-label">Broadcast (all)</span><span class="ref-val">255.255.255.255</span></div>
+        <div class="ref-item"><span class="ref-label">IPv6 Loopback</span><span class="ref-val">::1/128</span></div>
+        <div class="ref-item"><span class="ref-label">IPv6 Global UC</span><span class="ref-val">2000::/3</span></div>
+        <div class="ref-item"><span class="ref-label">IPv6 Unspecified</span><span class="ref-val">::/128</span></div>
+      </div>
+    </div>
+
+    <!-- Tips -->
+    <div class="info-card">
+      <div class="info-title">Pro Tips</div>
+      <div class="tip-list">
+        <div class="tip-item"><span class="tip-num">01</span><span class="tip-text">Use the <strong style="color:var(--t1)">IP Calculator</strong> CIDR slider and spinner together — both stay perfectly in sync and update all results live.</span></div>
+        <div class="tip-item"><span class="tip-num">02</span><span class="tip-text">In the <strong style="color:var(--t1)">Subnet Splitter</strong>, enter a larger prefix than your current one — e.g. split a /24 into /26s to get four equal subnets.</span></div>
+        <div class="tip-item"><span class="tip-num">03</span><span class="tip-text">The <strong style="color:var(--t2)">Traceroute</strong> Lossy profile simulates degraded links with packet loss and high jitter — great for learning about real-world failures.</span></div>
+        <div class="tip-item"><span class="tip-num">04</span><span class="tip-text"><strong style="color:var(--t3)">VLSM</strong> always allocates largest subnets first. List your requirements in any order — the calculator sorts and aligns them automatically.</span></div>
+        <div class="tip-item"><span class="tip-num">05</span><span class="tip-text">In <strong style="color:var(--t3)">Route Summarization</strong>, coverage efficiency below 50% means the supernet is "loose" — consider splitting into two separate summary routes.</span></div>
+        <div class="tip-item"><span class="tip-num">06</span><span class="tip-text">The <strong style="color:var(--t3)">Bandwidth Calculator</strong> efficiency field defaults to 90%. Real TCP transfers over WAN often achieve 70–85% due to overhead and congestion.</span></div>
+        <div class="tip-item"><span class="tip-num">07</span><span class="tip-text">Every tool includes a <strong style="color:var(--acc)">Glossary tab</strong> with precise definitions — a complete on-demand networking reference built right in.</span></div>
+        <div class="tip-item"><span class="tip-num">08</span><span class="tip-text">All tools support <strong style="color:var(--acc)">PDF Export</strong> via the browser print dialog — choose "Save as PDF" to keep a record of any calculation.</span></div>
+      </div>
+    </div>
+
+  </div>
+
+  <footer>
+    Network Toolkit Command Center &nbsp;&middot;&nbsp; All tools run entirely in your browser &nbsp;&middot;&nbsp; No data is sent to any server
+    <div class="footer-links">
+      <a class="footer-link" href="ip-calculator-v2.html" target="_blank">IP Calculator Pro</a>
+      <a class="footer-link" href="ping-traceroute-visualizer.html" target="_blank">Ping &amp; Traceroute</a>
+      <a class="footer-link" href="network-toolkit-advanced.html" target="_blank">Advanced Toolkit</a>
+    </div>
+  </footer>
+
+</div>
+
+<script>
+// ── Particle canvas background ──────────────────────────────
+const canvas=document.getElementById('bgCanvas');
+const ctx=canvas.getContext('2d');
+let W,H,particles=[];
+
+function resize(){W=canvas.width=window.innerWidth;H=canvas.height=window.innerHeight}
+resize();window.addEventListener('resize',resize);
+
+class Particle{
+  constructor(){this.reset()}
+  reset(){
+    this.x=Math.random()*W;this.y=Math.random()*H;
+    this.vx=(Math.random()-.5)*.3;this.vy=(Math.random()-.5)*.3;
+    this.r=Math.random()*1.2+.3;this.life=Math.random();this.maxLife=1;
+    this.col=Math.random()<.6?'rgba(46,168,224,':'rgba(88,200,244,';
+  }
+  update(){this.x+=this.vx;this.y+=this.vy;this.life+=.003;
+    if(this.life>this.maxLife||this.x<0||this.x>W||this.y<0||this.y>H)this.reset()}
+  draw(){const a=Math.sin(this.life*Math.PI)*.4;ctx.beginPath();ctx.arc(this.x,this.y,this.r,0,Math.PI*2);
+    ctx.fillStyle=this.col+a+')';ctx.fill()}
+}
+
+for(let i=0;i<80;i++)particles.push(new Particle());
+
+// Connection lines between nearby particles
+function drawConnections(){
+  for(let i=0;i<particles.length;i++){
+    for(let j=i+1;j<particles.length;j++){
+      const dx=particles[i].x-particles[j].x,dy=particles[i].y-particles[j].y;
+      const dist=Math.sqrt(dx*dx+dy*dy);
+      if(dist<120){const a=(1-dist/120)*.06;
+        ctx.strokeStyle=`rgba(46,168,224,${a})`;ctx.lineWidth=.5;
+        ctx.beginPath();ctx.moveTo(particles[i].x,particles[i].y);ctx.lineTo(particles[j].x,particles[j].y);ctx.stroke()}
+    }
+  }
+}
+
+function animate(){
+  ctx.clearRect(0,0,W,H);
+  drawConnections();
+  particles.forEach(p=>{p.update();p.draw()});
+  requestAnimationFrame(animate);
+}
+animate();
+
+// ── Session timer ───────────────────────────────────────────
+let startTime=Date.now();
+function updateTime(){
+  const el=document.getElementById('sessionTime');
+  if(el){const s=Math.floor((Date.now()-startTime)/1000);const m=Math.floor(s/60);
+    el.textContent=String(m).padStart(2,'0')+':'+String(s%60).padStart(2,'0')}
+  const tl=document.getElementById('localTime');
+  if(tl){const n=new Date();tl.textContent=n.toLocaleTimeString([],{hour:'2-digit',minute:'2-digit',second:'2-digit'})}
+}
+setInterval(updateTime,1000);updateTime();
+
+// ── Card hover sound-like ripple effect ─────────────────────
+document.querySelectorAll('.tool-card[href]').forEach(card=>{
+  card.addEventListener('click',e=>{
+    card.classList.remove('launch-ring');void card.offsetWidth;card.classList.add('launch-ring');
+  });
+});
+</script>
+</body>
+</html>
